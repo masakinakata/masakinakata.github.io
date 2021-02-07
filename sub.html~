@@ -2,22 +2,14 @@
   <head>
     <meta charset='utf-8'>
     <title>masakinakata profile</title>
-    <script language="JavaScript" type="text/javascript">
-　　function nextPage(){
-　　　pwd=document.form1.pass.value;
-　　　location.href=pwd+".html";
-　　}
-</script> 
   </head>
   <body>
     <!-- ここに書きたい内容を書く -->
-    <a href= "tsukuba/index.html" >筑波大付属高校過去問</a>  <br>
-    <a href= "highschoolmath/index.html" > 高校数学</a> <br>
-    それ以外を閲覧の場合はパスワードを入力してください
-    <form name="form1">
-<input type="password" name="pass">
-<input type="button" value="パスワード入力" onClick="nextPage();">
-</form>
+    <a href = "AP/index.html" > 応用情報技術者試験対策 </a> <br>
+    <a href= "lambda/index.html" >Lambda calculus</a>  <br>
+    <a href = "optimize/index.html" > Optimisation and Machine Learning</a> <br>
+    <a href = "python/index.html" > Pythonプログラミング入門</a> <br>
+    <a href = "Informationmathematics/index.html" > Information Mathematics </a> <br>
   </body>
 </html>
 
