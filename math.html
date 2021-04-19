@@ -1,0 +1,31 @@
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <title>masakinakata profile</title>
+  </head>
+  <body>
+
+    <!-- ここに書きたい内容を書く -->
+    <a href= "math/test_1.pdf" >test1</a>  <br>
+  </body>
+</html>
+
+<span id="view_time"></span>
+
+<script type="text/javascript">
+document.getElementById("view_time").innerHTML = getNow();
+
+function getNow() {
+	var now = new Date();
+	var year = now.getFullYear();
+	var mon = now.getMonth()+1; //１を足すこと
+	var day = now.getDate();
+	var hour = now.getHours();
+	var min = now.getMinutes();
+	var sec = now.getSeconds();
+
+	//出力用
+	var s = year + "年" + mon + "月" + day + "日" + hour + "時" + min + "分" + sec + "秒 に閲覧"; 
+	return s;
+}
+</script>
