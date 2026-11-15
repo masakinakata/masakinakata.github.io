@@ -181,7 +181,7 @@
       <p class="summary-msg" id="summaryMsg"></p>
       <div class="actions">
         <button id="retryWrong">間違えた問題を解き直す</button>
-        <button id="restartAll" class="secondary">全問をシャッフルして最初から</button>
+        <button id="restartAll" class="secondary">新しい問題に挑戦する</button>
       </div>
     </section>
     <section class="card">
@@ -211,12 +211,15 @@ const els = {
   retryWrong: $("retryWrong"), restartAll: $("restartAll")
 };
 
+const QUIZ_SIZE = 3;  // 1 回のテストで出題する問題数
+
 const state = {
   queue: [],     // 今回のラウンドで出題する問題（シャッフル済み）
   index: 0,
   records: [],   // { q, chosen: [], ok: bool }
-  round: 1,      // 1 = 全問、2 以降 = 解き直し
-  answered: false
+  round: 1,      // 1 = 新しいテスト、2 以降 = 解き直し
+  answered: false,
+  unseen: []     // まだ出題していない問題（全問出し切ったら補充）
 };
 
 function shuffle(arr) {
@@ -227,6 +230,17 @@ function shuffle(arr) {
   }
   return a;
 }
+
+// 未出題の問題を優先して QUIZ_SIZE 問を選ぶ
+function pickNewSet() {
+  if (state.unseen.length < QUIZ_SIZE) {
+    const rest = shuffle(QUESTIONS.filter(q => !state.unseen.includes(q)));
+    state.unseen = [...state.unseen, ...rest];
+  }
+  return state.unseen.splice(0, Math.min(QUIZ_SIZE, QUESTIONS.length));
+}
+
+function startNewTest() { startRound(pickNewSet(), 1); }
 
 function startRound(questions, round) {
   state.queue = shuffle(questions);
@@ -387,7 +401,7 @@ function showSummary() {
     els.retryWrong.hidden = false;
     els.retryWrong.textContent = `間違えた ${wrong.length} 問を解き直す`;
   }
-  els.restartAll.textContent = `全 ${QUESTIONS.length} 問をシャッフルして最初から`;
+  els.restartAll.textContent = `新しい ${QUIZ_SIZE} 問に挑戦する`;
 
   // 間違えた問題を上に並べる
   const sorted = [...wrong, ...state.records.filter(r => r.ok)];
@@ -408,10 +422,10 @@ els.retryWrong.addEventListener("click", () => {
   const wrongQs = state.records.filter(r => !r.ok).map(r => r.q);
   if (wrongQs.length) startRound(wrongQs, state.round + 1);
 });
-els.restartAll.addEventListener("click", () => startRound(QUESTIONS, 1));
+els.restartAll.addEventListener("click", startNewTest);
 
-// 起動時：全問をランダムな順番で出題
-startRound(QUESTIONS, 1);
+// 起動時：ランダムに QUIZ_SIZE 問を出題
+startNewTest();
 </script>
 </body>
 </html>
