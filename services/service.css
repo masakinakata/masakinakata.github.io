@@ -1,0 +1,116 @@
+/* サービス解説ページ共通スタイル */
+:root {
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --text: #1d232b;
+  --muted: #5b6573;
+  --border: #d9dee5;
+  --accent: #e8710a;
+  --accent-weak: #fff3e8;
+  --ok: #1e8e3e;
+  --ok-weak: #e7f5ec;
+  --ng: #c5221f;
+  --ng-weak: #fdeceb;
+  --code-bg: #eef1f5;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161c; --card: #1b2129; --text: #e6e9ee; --muted: #9aa4b2; --border: #2e3744;
+    --accent: #ff9a3c; --accent-weak: #3a2a1a; --ok: #5cc27a; --ok-weak: #18301f;
+    --ng: #f07470; --ng-weak: #3a1c1c; --code-bg: #242c37;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161c; --card: #1b2129; --text: #e6e9ee; --muted: #9aa4b2; --border: #2e3744;
+  --accent: #ff9a3c; --accent-weak: #3a2a1a; --ok: #5cc27a; --ok-weak: #18301f;
+  --ng: #f07470; --ng-weak: #3a1c1c; --code-bg: #242c37;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: "Hiragino Sans", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+  line-height: 1.75;
+}
+main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+a { color: var(--accent); }
+.crumbs { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+.crumbs a { text-decoration: none; }
+.crumbs a:hover { text-decoration: underline; }
+header { margin-bottom: 20px; }
+.tag {
+  display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .04em;
+  color: var(--accent); background: var(--accent-weak);
+  padding: 2px 10px; border-radius: 999px; margin: 0 6px 4px 0;
+}
+h1 { font-size: 24px; margin: 8px 0 6px; }
+.lead { margin: 0; color: var(--muted); }
+.card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 24px; margin-bottom: 20px;
+}
+h2 { font-size: 18px; margin: 0 0 12px; padding-left: 10px; border-left: 4px solid var(--accent); }
+h3 { font-size: 15px; margin: 20px 0 6px; }
+h3:first-child { margin-top: 0; }
+p { margin: 0 0 12px; }
+ul { margin: 0 0 12px; padding-left: 1.3em; }
+li { margin-bottom: 6px; }
+code { background: var(--code-bg); padding: 1px 6px; border-radius: 4px; font-size: .92em; }
+.table-wrap { overflow-x: auto; margin-bottom: 4px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 560px; }
+th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background: var(--code-bg); }
+tr.hit td { background: var(--accent-weak); font-weight: 700; }
+.points li { margin-bottom: 8px; }
+.back { margin-top: 28px; font-size: 14px; }
+
+/* ===== 図 ===== */
+.diagram { margin: 0; overflow-x: auto; }
+.diagram svg { display: block; width: 100%; min-width: 600px; height: auto; }
+.diagram figcaption { font-size: 13px; color: var(--muted); margin-top: 10px; }
+svg.defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+.diagram text { font-family: inherit; }
+.diagram .t  { fill: var(--text); font-size: 13px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.diagram .s  { fill: var(--muted); font-size: 11px; text-anchor: middle; dominant-baseline: central; }
+.diagram .zl { fill: var(--muted); font-size: 12px; font-weight: 700; dominant-baseline: hanging; }
+.diagram .al { fill: var(--muted); font-size: 11px; text-anchor: middle; }
+.diagram .al.acc { fill: var(--accent); font-weight: 700; }
+.diagram .al.ng  { fill: var(--ng); font-weight: 700; }
+.diagram .al.ok  { fill: var(--ok); font-weight: 700; }
+/* 線と重なっても読めるよう、ラベルの周りをカード色で縁取る */
+.diagram .zl, .diagram .al { paint-order: stroke fill; stroke: var(--card); stroke-width: 5px; stroke-linejoin: round; }
+.diagram .start { text-anchor: start; }
+.diagram .end   { text-anchor: end; }
+
+.diagram .box  { fill: var(--card); stroke: var(--border); stroke-width: 1.5; }
+.diagram :not(text).acc { fill: var(--accent-weak); stroke: var(--accent); stroke-width: 1.5; }
+.diagram :not(text).ok  { fill: var(--ok-weak); stroke: var(--ok); stroke-width: 1.5; }
+.diagram :not(text).ng  { fill: var(--ng-weak); stroke: var(--ng); stroke-width: 1.5; }
+.diagram .zone { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 6 4; }
+.diagram .dashed { stroke-dasharray: 6 4; }
+.diagram .alpha { fill-opacity: .55; }
+
+.diagram .line  { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+.diagram .arrow { stroke: var(--muted); stroke-width: 1.6; fill: none; marker-end: url(#ah); }
+.diagram .arrow.acc { fill: none; stroke: var(--accent); stroke-width: 2.2; marker-end: url(#ah-acc); }
+.diagram .arrow.ng  { fill: none; stroke: var(--ng); stroke-width: 1.8; stroke-dasharray: 6 4; marker-end: url(#ah-ng); }
+.diagram .arrow.ok  { fill: none; stroke: var(--ok); stroke-width: 2; marker-end: url(#ah-ok); }
+.diagram .arrow.both { marker-start: url(#ah); }
+.diagram .arrow.acc.both { marker-start: url(#ah-acc); }
+
+svg.defs .m     { fill: var(--muted); }
+svg.defs .m-acc { fill: var(--accent); }
+svg.defs .m-ng  { fill: var(--ng); }
+svg.defs .m-ok  { fill: var(--ok); }
+
+/* ===== 一覧ページ ===== */
+.svc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.svc-card {
+  display: block; text-decoration: none; color: var(--text);
+  background: var(--card); border: 1.5px solid var(--border); border-radius: 10px; padding: 14px 16px;
+  transition: border-color .15s;
+}
+.svc-card:hover { border-color: var(--accent); }
+.svc-card strong { display: block; margin-bottom: 4px; }
+.svc-card span { font-size: 13px; color: var(--muted); }
+.cat { font-size: 15px; margin: 24px 0 10px; }

@@ -3,6 +3,7 @@
    - answer は配列。2 つ以上なら「複数選択」として出題される
    - why は選択肢ごとの解説（HTML 可）
    - extra は任意の追加 HTML（表やコード例）
+   - services は関連するサービス解説ページのキー（services/catalog.js）
    ========================================================= */
 const D1 = "Domain 1: 組織の複雑さに対応するソリューションの設計";
 const D2 = "Domain 2: 新しいソリューションの設計";
@@ -13,6 +14,7 @@ const QUESTIONS = [
   /* ---------- 1 ---------- */
   {
     id: 1,
+    services: ["aurora-global-database"],
     domain: D2,
     title: "マルチリージョンの災害対策",
     scenario: `
@@ -65,6 +67,7 @@ const QUESTIONS = [
   /* ---------- 2 ---------- */
   {
     id: 2,
+    services: ["transit-gateway"],
     domain: D1,
     title: "多数の VPC とオンプレミスの接続",
     scenario: `
@@ -103,6 +106,7 @@ const QUESTIONS = [
   /* ---------- 3 ---------- */
   {
     id: 3,
+    services: ["scp"],
     domain: D1,
     title: "リージョン利用の制限とガバナンス",
     scenario: `
@@ -166,6 +170,7 @@ const QUESTIONS = [
   /* ---------- 4 ---------- */
   {
     id: 4,
+    services: ["ec2-spot"],
     domain: D3,
     title: "夜間バッチのコスト最適化",
     scenario: `
@@ -215,6 +220,7 @@ const QUESTIONS = [
   /* ---------- 5 ---------- */
   {
     id: 5,
+    services: ["dms"],
     domain: D4,
     title: "Oracle から Aurora PostgreSQL への移行",
     scenario: `
@@ -251,6 +257,7 @@ const QUESTIONS = [
   /* ---------- 6 ---------- */
   {
     id: 6,
+    services: ["mgn"],
     domain: D4,
     title: "大量サーバーのリホスト移行",
     scenario: `
@@ -303,6 +310,7 @@ const QUESTIONS = [
   /* ---------- 7 ---------- */
   {
     id: 7,
+    services: ["kms"],
     domain: D2,
     title: "SSE-KMS 暗号化バケットへのクロスアカウントアクセス",
     scenario: `
@@ -339,6 +347,7 @@ const QUESTIONS = [
   /* ---------- 8 ---------- */
   {
     id: 8,
+    services: ["sqs"],
     domain: D3,
     title: "処理層の疎結合化とスケーリング",
     scenario: `
@@ -376,6 +385,7 @@ const QUESTIONS = [
   /* ---------- 9 ---------- */
   {
     id: 9,
+    services: ["cloudtrail"],
     domain: D1,
     title: "組織全体の監査ログの一元管理",
     scenario: `
@@ -413,6 +423,7 @@ const QUESTIONS = [
   /* ---------- 10 ---------- */
   {
     id: 10,
+    services: ["route53-resolver"],
     domain: D2,
     title: "ハイブリッド環境の DNS 名前解決",
     scenario: `
@@ -449,6 +460,7 @@ const QUESTIONS = [
   /* ---------- 11 ---------- */
   {
     id: 11,
+    services: ["global-accelerator"],
     domain: D2,
     title: "グローバルな UDP ゲームの低レイテンシー化",
     scenario: `
@@ -496,6 +508,7 @@ const QUESTIONS = [
   /* ---------- 12 ---------- */
   {
     id: 12,
+    services: ["rds-proxy"],
     domain: D3,
     title: "Lambda から RDB への接続枯渇",
     scenario: `
@@ -532,6 +545,7 @@ const QUESTIONS = [
   /* ---------- 13 ---------- */
   {
     id: 13,
+    services: ["iam-identity-center"],
     domain: D1,
     title: "多数アカウントへのシングルサインオン",
     scenario: `
@@ -568,6 +582,7 @@ const QUESTIONS = [
   /* ---------- 14 ---------- */
   {
     id: 14,
+    services: ["kinesis-data-streams"],
     domain: D2,
     title: "クリックストリームのリアルタイム処理",
     scenario: `
@@ -603,6 +618,7 @@ const QUESTIONS = [
   /* ---------- 15 ---------- */
   {
     id: 15,
+    services: ["session-manager"],
     domain: D3,
     title: "踏み台サーバーの廃止とセキュアな運用アクセス",
     scenario: `
@@ -639,6 +655,7 @@ const QUESTIONS = [
   /* ---------- 16 ---------- */
   {
     id: 16,
+    services: ["fsx-windows","datasync"],
     domain: D4,
     title: "Windows ファイルサーバーの移行",
     scenario: `
@@ -687,6 +704,7 @@ const QUESTIONS = [
   /* ---------- 17 ---------- */
   {
     id: 17,
+    services: ["waf"],
     domain: D2,
     title: "CloudFront + ALB の Web アプリ保護",
     scenario: `
@@ -724,6 +742,7 @@ const QUESTIONS = [
   /* ---------- 18 ---------- */
   {
     id: 18,
+    services: ["s3-intelligent-tiering"],
     domain: D3,
     title: "アクセスパターンが予測できないデータのストレージコスト",
     scenario: `
@@ -761,6 +780,7 @@ const QUESTIONS = [
   /* ---------- 19 ---------- */
   {
     id: 19,
+    services: ["datasync"],
     domain: D4,
     title: "大量ファイルのオンライン移行",
     scenario: `
@@ -797,6 +817,7 @@ const QUESTIONS = [
   /* ---------- 20 ---------- */
   {
     id: 20,
+    services: ["aws-backup"],
     domain: D1,
     title: "組織全体のバックアップ統制",
     scenario: `

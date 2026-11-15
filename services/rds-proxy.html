@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amazon RDS Proxy</title>
+<link rel="stylesheet" href="service.css">
+</head>
+<body>
+<svg class="defs" aria-hidden="true" focusable="false"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-acc" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ng" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ng" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ok" d="M0,0L10,5L0,10z"/></marker>
+</defs></svg>
+<main>
+  <nav class="crumbs"><a href="../index.html">クイズ</a> / <a href="index.html">サービス解説</a></nav>
+  <header>
+    <span class="tag">データベース</span>
+    <h1>Amazon RDS Proxy</h1>
+    <p class="lead">アプリケーションと RDS / Aurora の間に入るフルマネージドなデータベースプロキシ。DB 接続をプールして使い回すことで、接続数の枯渇を防ぎ、フェイルオーバー時の影響も小さくする。</p>
+  </header>
+
+  <section class="card">
+    <h2>構成図</h2>
+    <figure class="diagram">
+      <svg viewBox="0 0 720 340" role="img" aria-label="多数の Lambda からの接続を RDS Proxy が少数の DB 接続に集約する構成">
+        <rect class="box" x="20" y="30" width="130" height="34" rx="6"/><text class="t" x="85" y="47">Lambda</text>
+        <rect class="box" x="20" y="74" width="130" height="34" rx="6"/><text class="t" x="85" y="91">Lambda</text>
+        <rect class="box" x="20" y="118" width="130" height="34" rx="6"/><text class="t" x="85" y="135">Lambda</text>
+        <rect class="box" x="20" y="162" width="130" height="34" rx="6"/><text class="t" x="85" y="179">Lambda</text>
+        <rect class="box" x="20" y="206" width="130" height="34" rx="6"/><text class="t" x="85" y="223">Lambda</text>
+
+        <path class="arrow" d="M150,47 L258,130"/>
+        <path class="arrow" d="M150,91 L258,140"/>
+        <path class="arrow" d="M150,135 L258,150"/>
+        <path class="arrow" d="M150,179 L258,160"/>
+        <path class="arrow" d="M150,223 L258,170"/>
+
+        <rect class="acc" x="260" y="100" width="180" height="100" rx="10"/>
+        <text class="t" x="350" y="135">RDS Proxy</text><text class="s" x="350" y="158">接続プール・多重化</text><text class="s" x="350" y="176">フェイルオーバー時も接続を保持</text>
+
+        <rect class="box" x="260" y="260" width="180" height="56" rx="8"/>
+        <text class="t" x="350" y="280">Secrets Manager</text><text class="s" x="350" y="299">DB の認証情報</text>
+        <path class="line dashed" d="M350,200 L350,260"/>
+
+        <rect class="box" x="530" y="70" width="170" height="60" rx="8"/>
+        <text class="t" x="615" y="91">Aurora ライター</text><text class="s" x="615" y="110">読み書き</text>
+        <rect class="box" x="530" y="190" width="170" height="60" rx="8"/>
+        <text class="t" x="615" y="211">Aurora リーダー</text><text class="s" x="615" y="230">読み取り専用エンドポイント</text>
+        <path class="arrow acc" d="M440,135 L528,100"/>
+        <path class="arrow acc" d="M440,170 L528,220"/>
+        <!-- ラベルは最前面に描画 -->
+        <text class="al" x="85" y="264">同時実行 数千</text>
+        <text class="al acc" x="615" y="164">少数の DB 接続を再利用</text>
+      </svg>
+      <figcaption>Lambda の同時実行が急増しても、DB に張られる接続はプロキシがプールした少数の接続に抑えられる。</figcaption>
+    </figure>
+  </section>
+
+  <section class="card">
+    <h2>仕組みと主な機能</h2>
+    <ul>
+      <li><strong>接続プーリングと多重化</strong>：クライアントの接続を受け付け、トランザクションの合間に DB 接続を別のクライアントへ使い回す。</li>
+      <li><strong>ピン留め（pinning）</strong>：セッション変数の変更など、接続の状態に依存する操作があると、その接続は特定のクライアントに固定され、多重化の効果が下がる。</li>
+      <li><strong>フェイルオーバー時間の短縮</strong>：DNS の切り替えを待たずに新しいライターへ接続を張り直す。アプリ側の接続は維持される。</li>
+      <li><strong>認証</strong>：認証情報は <strong>Secrets Manager</strong> に保存。アプリからは <strong>IAM 認証</strong>で接続でき、パスワードをコードに持たなくてよい。</li>
+      <li>Aurora では<strong>読み取り専用エンドポイント</strong>を追加してリーダーに振り分けられる。</li>
+      <li>対応エンジン：Aurora MySQL / PostgreSQL、RDS for MySQL / PostgreSQL / MariaDB / SQL Server。プロキシは VPC 内に作られ、インターネットからは直接使えない。</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>試験で狙われるポイント</h2>
+    <ul class="points">
+      <li>「<strong>Lambda + RDB</strong>」「<strong>Too many connections</strong>」→ RDS Proxy。</li>
+      <li>「<strong>フェイルオーバー時間を短縮</strong>」「<strong>IAM 認証を強制</strong>」「<strong>認証情報を Secrets Manager で管理</strong>」も RDS Proxy のキーワード。</li>
+      <li>DB インスタンスを大きくして max_connections を増やす案は、一時しのぎで不正解になりやすい。</li>
+      <li>読み取り負荷が問題なら ElastiCache やリードレプリカ、接続数が問題なら RDS Proxy、と原因で使い分ける。</li>
+    </ul>
+  </section>
+
+  <p class="back"><a href="index.html">← サービス解説の一覧へ</a></p>
+</main>
+</body>
+</html>

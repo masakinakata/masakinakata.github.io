@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS CloudTrail</title>
+<link rel="stylesheet" href="service.css">
+</head>
+<body>
+<svg class="defs" aria-hidden="true" focusable="false"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-acc" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ng" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ng" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ok" d="M0,0L10,5L0,10z"/></marker>
+</defs></svg>
+<main>
+  <nav class="crumbs"><a href="../index.html">クイズ</a> / <a href="index.html">サービス解説</a></nav>
+  <header>
+    <span class="tag">セキュリティ・ガバナンス</span>
+    <h1>AWS CloudTrail（組織の証跡）</h1>
+    <p class="lead">AWS アカウントで「誰が・いつ・何をしたか」という API アクティビティを記録するサービス。組織の証跡を使うと、全アカウントのログを 1 か所に集約できる。</p>
+  </header>
+
+  <section class="card">
+    <h2>構成図</h2>
+    <figure class="diagram">
+      <svg viewBox="0 0 720 380" role="img" aria-label="組織の証跡で全アカウントのログを Log Archive アカウントの S3 バケットに集約する構成">
+        <rect class="zone" x="20" y="20" width="300" height="340" rx="10"/>
+        <rect class="acc" x="40" y="55" width="260" height="56" rx="8"/>
+        <text class="t" x="170" y="74">管理アカウント</text><text class="s" x="170" y="94">組織の証跡を作成（委任管理者も可）</text>
+        <rect class="box" x="40" y="140" width="80" height="50" rx="8"/>
+        <text class="t" x="80" y="158">アカウント</text><text class="s" x="80" y="176">A</text>
+        <rect class="box" x="130" y="140" width="80" height="50" rx="8"/>
+        <text class="t" x="170" y="158">アカウント</text><text class="s" x="170" y="176">B</text>
+        <rect class="box dashed" x="220" y="140" width="80" height="50" rx="8"/>
+        <text class="t" x="260" y="158">新規</text><text class="s" x="260" y="176">自動で記録</text>
+        <rect class="box" x="40" y="280" width="260" height="56" rx="8"/>
+        <text class="t" x="170" y="299">監査（Audit）アカウント</text><text class="s" x="170" y="319">Athena / CloudTrail Lake で調査</text>
+
+        <rect class="zone" x="380" y="20" width="320" height="340" rx="10"/>
+        <rect class="acc" x="410" y="60" width="270" height="70" rx="8"/>
+        <text class="t" x="545" y="84">S3 バケット</text><text class="s" x="545" y="107">オブジェクトロック（コンプライアンスモード）</text>
+        <rect class="box" x="410" y="160" width="270" height="56" rx="8"/>
+        <text class="t" x="545" y="179">ダイジェストファイル</text><text class="s" x="545" y="199">ログファイルの整合性検証（改ざん検知）</text>
+        <rect class="box" x="410" y="245" width="270" height="56" rx="8"/>
+        <text class="t" x="545" y="264">ライフサイクルルール</text><text class="s" x="545" y="284">古いログを Glacier へ・保持期間後に削除</text>
+
+        <path class="arrow acc" d="M300,83 L408,90"/>
+        <path class="arrow acc" d="M310,165 L408,108"/>
+        <path class="arrow dashed" d="M410,128 L302,298"/>
+        <!-- ラベルは最前面に描画 -->
+        <text class="zl" x="34" y="28">AWS Organizations</text>
+        <text class="al" x="170" y="218">メンバー側では停止・削除できない</text>
+        <text class="zl" x="394" y="28">Log Archive アカウント</text>
+        <text class="al acc" x="355" y="76">集約</text>
+        <text class="al start" x="366" y="236">ログを参照</text>
+      </svg>
+      <figcaption>組織の証跡は新しく追加されたアカウントにも自動で適用される。ログはワークロードと切り離した Log Archive アカウントに置き、オブジェクトロックで削除・上書きを防ぐ。</figcaption>
+    </figure>
+  </section>
+
+  <section class="card">
+    <h2>仕組みと主な機能</h2>
+    <h3>記録できるイベント</h3>
+    <ul>
+      <li><strong>管理イベント</strong>：リソースの作成・変更・削除など、コントロールプレーンの操作。デフォルトで記録される。</li>
+      <li><strong>データイベント</strong>：S3 オブジェクトの読み書きや Lambda の呼び出しなど、量が多い操作。明示的に有効化が必要（追加料金）。</li>
+      <li><strong>Insights イベント</strong>：API 呼び出し量やエラー率の異常を検知する。</li>
+    </ul>
+    <h3>保存先と保持</h3>
+    <ul>
+      <li><strong>イベント履歴</strong>：何も設定しなくても過去 <strong>90 日分の管理イベント</strong>を閲覧できる。それ以上残すには証跡か CloudTrail Lake が必要。</li>
+      <li><strong>証跡（Trail）</strong>：S3（任意で CloudWatch Logs）に継続的に配信する。全リージョンを対象にするのが基本。</li>
+      <li><strong>CloudTrail Lake</strong>：イベントをマネージドなデータストアに保存し、SQL で直接検索できる。</li>
+    </ul>
+    <h3>ログを守る仕組み</h3>
+    <ul>
+      <li><strong>ログファイルの整合性検証</strong>：1 時間ごとにダイジェストファイルを作成し、ログが改ざん・削除されていないかを検証できる。</li>
+      <li><strong>S3 オブジェクトロック</strong>：<strong>コンプライアンスモード</strong>は root ユーザーでも保持期間内の削除や期間の短縮ができない。<strong>ガバナンスモード</strong>は特別な権限があれば解除できる。</li>
+      <li>SSE-KMS で暗号化し、バケットポリシーで CloudTrail サービスからの書き込みだけを許可する。</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>試験で狙われるポイント</h2>
+    <ul class="points">
+      <li>「<strong>全アカウント</strong>」「<strong>新規アカウントにも自動適用</strong>」「<strong>メンバーが変更できない</strong>」→ 組織の証跡。</li>
+      <li>「<strong>誰も削除できない</strong>」→ オブジェクトロックの<strong>コンプライアンスモード</strong>。バージョニングや MFA Delete だけでは不十分。</li>
+      <li>イベント履歴は 90 日。長期保持の要件があるなら証跡や CloudTrail Lake を選ぶ。</li>
+      <li>Log Archive と Audit を専用アカウントに分けるのが、マルチアカウント構成の定石（Control Tower の標準構成も同じ）。</li>
+    </ul>
+  </section>
+
+  <p class="back"><a href="index.html">← サービス解説の一覧へ</a></p>
+</main>
+</body>
+</html>

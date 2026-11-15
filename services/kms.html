@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS KMS</title>
+<link rel="stylesheet" href="service.css">
+</head>
+<body>
+<svg class="defs" aria-hidden="true" focusable="false"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-acc" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ng" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ng" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ok" d="M0,0L10,5L0,10z"/></marker>
+</defs></svg>
+<main>
+  <nav class="crumbs"><a href="../index.html">クイズ</a> / <a href="index.html">サービス解説</a></nav>
+  <header>
+    <span class="tag">セキュリティ・ガバナンス</span>
+    <h1>AWS KMS（Key Management Service）</h1>
+    <p class="lead">暗号化キーを作成・管理し、誰がキーを使えるかを制御するサービス。S3、EBS、RDS など多くのサービスの暗号化を支えている。キーの実体は HSM の外に出ない。</p>
+  </header>
+
+  <section class="card">
+    <h2>構成図</h2>
+    <figure class="diagram">
+      <svg viewBox="0 -14 720 414" role="img" aria-label="エンベロープ暗号化の流れと、クロスアカウントで KMS キーを使うために必要な 2 つのポリシー">
+        <rect class="acc" x="20" y="35" width="170" height="64" rx="8"/>
+        <text class="t" x="105" y="57">KMS キー</text><text class="s" x="105" y="78">HSM の外に出ない</text>
+        <rect class="box" x="270" y="22" width="180" height="40" rx="8"/>
+        <text class="t" x="360" y="42">データキー（平文）</text>
+        <rect class="box" x="270" y="76" width="180" height="40" rx="8"/>
+        <text class="t" x="360" y="96">データキー（暗号化済み）</text>
+        <path class="arrow acc" d="M190,55 L268,42"/>
+        <path class="arrow acc" d="M190,80 L268,96"/>
+        <rect class="box" x="520" y="22" width="180" height="40" rx="8"/>
+        <text class="t" x="610" y="42">データを暗号化 → 破棄</text>
+        <rect class="ok" x="520" y="76" width="180" height="40" rx="8"/>
+        <text class="t" x="610" y="96">暗号文と一緒に保存</text>
+        <path class="arrow" d="M450,42 L518,42"/>
+        <path class="arrow" d="M450,96 L518,96"/>
+
+        <rect class="zone" x="20" y="160" width="330" height="225" rx="10"/>
+        <rect class="acc" x="40" y="200" width="130" height="54" rx="8"/>
+        <text class="t" x="105" y="218">KMS キー</text><text class="s" x="105" y="237">カスタマーマネージド</text>
+        <rect class="box" x="200" y="200" width="130" height="54" rx="8"/>
+        <text class="t" x="265" y="218">S3 バケット</text><text class="s" x="265" y="237">SSE-KMS</text>
+        <rect class="ok" x="40" y="285" width="290" height="80" rx="8"/>
+        <text class="t" x="185" y="312">❶ キーポリシー</text><text class="s" x="185" y="338">アカウント B に kms:Decrypt を許可</text>
+
+        <rect class="zone" x="370" y="160" width="330" height="225" rx="10"/>
+        <rect class="box" x="400" y="200" width="270" height="54" rx="8"/>
+        <text class="t" x="535" y="218">Lambda 実行ロール</text><text class="s" x="535" y="237">S3 のオブジェクトを読みたい</text>
+        <rect class="ok" x="400" y="285" width="270" height="80" rx="8"/>
+        <text class="t" x="535" y="312">❷ IAM ポリシー</text><text class="s" x="535" y="338">キーの ARN に kms:Decrypt を許可</text>
+
+        <path class="arrow acc" d="M398,227 L332,227"/>
+        <path class="arrow acc" d="M198,227 L172,227"/>
+        <!-- ラベルは最前面に描画 -->
+        <text class="zl" x="20" y="0">① エンベロープ暗号化</text>
+        <text class="al acc" x="105" y="120">GenerateDataKey</text>
+        <text class="zl" x="34" y="168">アカウント A（キーの所有者）</text>
+        <text class="zl" x="384" y="168">アカウント B（利用する側）</text>
+        <text class="al acc" x="365" y="219">GetObject</text>
+        <text class="al acc" x="185" y="275">Decrypt</text>
+      </svg>
+      <figcaption>上：大きなデータは KMS キーで直接暗号化せず、データキーで暗号化する（エンベロープ暗号化）。下：別アカウントからキーを使うには、キー側（❶）と利用側（❷）の両方で許可が必要。</figcaption>
+    </figure>
+  </section>
+
+  <section class="card">
+    <h2>仕組みと主な機能</h2>
+    <h3>キーの種類</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>種類</th><th>キーポリシーの編集</th><th>ローテーション</th><th>クロスアカウント</th></tr></thead>
+        <tbody>
+          <tr class="hit"><td>カスタマーマネージドキー</td><td>できる</td><td>自動（任意で有効化・期間を指定）/ 手動</td><td>可能</td></tr>
+          <tr><td>AWS マネージドキー（<code>aws/s3</code> など）</td><td>できない</td><td>自動（毎年）</td><td>不可</td></tr>
+          <tr><td>AWS 所有キー</td><td>見えない</td><td>AWS が管理</td><td>不可</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>アクセス制御</h3>
+    <ul>
+      <li><strong>キーポリシー</strong>：すべての KMS キーに必須で、アクセス制御の起点。キーポリシーがアカウントに委任していれば、そのアカウントの IAM ポリシーでも許可できる。</li>
+      <li><strong>グラント</strong>：一時的・プログラム的に権限を委任する仕組み。AWS サービスが利用者の代わりにキーを使うときによく使われる。</li>
+      <li><strong>条件キー</strong>：<code>kms:ViaService</code>（特定のサービス経由のときだけ許可）や暗号化コンテキストで細かく制御できる。</li>
+    </ul>
+    <h3>その他</h3>
+    <ul>
+      <li><strong>マルチリージョンキー</strong>：同じキー素材を複数リージョンで使える。リージョン間でデータを再暗号化せずに復号したいときに使う。</li>
+      <li><strong>S3 バケットキー</strong>：S3 から KMS への呼び出し回数を減らし、SSE-KMS のコストを大きく下げる。</li>
+      <li>キーの使用はすべて <strong>CloudTrail</strong> に記録される。</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>試験で狙われるポイント</h2>
+    <ul class="points">
+      <li>クロスアカウントは「<strong>キーポリシー</strong>」と「<strong>利用側の IAM ポリシー</strong>」の両方が必要。片方だけの選択肢はひっかけ。</li>
+      <li>SSE-KMS のオブジェクトを読むには <code>s3:GetObject</code> に加えて <code>kms:Decrypt</code>、書き込みには <code>kms:GenerateDataKey</code> が必要。</li>
+      <li>AWS マネージドキーはキーポリシーを変更できないので、<strong>クロスアカウント共有には使えない</strong>。</li>
+      <li>KMS のリクエスト数の上限やコストが問題 → S3 バケットキー。</li>
+      <li>専用の HSM を単独で管理する必要がある（FIPS 140 レベル 3 の専有など）→ AWS CloudHSM。</li>
+    </ul>
+  </section>
+
+  <p class="back"><a href="index.html">← サービス解説の一覧へ</a></p>
+</main>
+</body>
+</html>

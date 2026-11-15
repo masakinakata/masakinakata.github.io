@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS DMS とスキーマ変換</title>
+<link rel="stylesheet" href="service.css">
+</head>
+<body>
+<svg class="defs" aria-hidden="true" focusable="false"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-acc" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ng" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ng" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ok" d="M0,0L10,5L0,10z"/></marker>
+</defs></svg>
+<main>
+  <nav class="crumbs"><a href="../index.html">クイズ</a> / <a href="index.html">サービス解説</a></nav>
+  <header>
+    <span class="tag">移行</span>
+    <h1>AWS DMS（Database Migration Service）とスキーマ変換</h1>
+    <p class="lead">データベースを AWS へ移行するサービス。ソースを動かしたままデータを複製し続けられるので、停止時間を短く抑えられる。異なる DB エンジン間の移行では、先にスキーマ変換（AWS SCT / DMS Schema Conversion）を行う。</p>
+  </header>
+
+  <section class="card">
+    <h2>構成図</h2>
+    <figure class="diagram">
+      <svg viewBox="0 0 720 370" role="img" aria-label="スキーマ変換と DMS の全ロード・CDC による移行の構成と、移行のタイムライン">
+        <rect class="box" x="20" y="40" width="170" height="70" rx="8"/>
+        <text class="t" x="105" y="64">Oracle</text><text class="s" x="105" y="86">ソース（オンプレミス）</text>
+        <rect class="acc" x="260" y="30" width="200" height="90" rx="10"/>
+        <text class="t" x="360" y="58">DMS レプリケーション</text><text class="t" x="360" y="78">インスタンス</text><text class="s" x="360" y="100">全ロード + CDC</text>
+        <rect class="box" x="530" y="40" width="170" height="70" rx="8"/>
+        <text class="t" x="615" y="64">Aurora PostgreSQL</text><text class="s" x="615" y="86">ターゲット</text>
+        <path class="arrow acc" d="M190,75 L258,75"/>
+        <path class="arrow acc" d="M460,75 L528,75"/>
+
+        <rect class="box" x="260" y="150" width="200" height="54" rx="8"/>
+        <text class="t" x="360" y="168">SCT / DMS Schema Conversion</text><text class="s" x="360" y="188">テーブル定義・プロシージャを変換</text>
+        <path class="arrow dashed" d="M105,110 L105,177 L258,177"/>
+        <path class="arrow dashed" d="M460,177 L615,177 L615,113"/>
+
+        <path class="line" d="M30,300 L690,300"/>
+        <rect class="box" x="30" y="245" width="140" height="44" rx="8"/><text class="t" x="100" y="267">① スキーマ変換</text>
+        <rect class="box" x="180" y="245" width="150" height="44" rx="8"/><text class="t" x="255" y="267">② 全ロード</text>
+        <rect class="acc" x="340" y="245" width="230" height="44" rx="8"/><text class="t" x="455" y="267">③ CDC で差分を同期し続ける</text>
+        <rect class="ng" x="580" y="245" width="110" height="44" rx="8"/><text class="t" x="635" y="259">④ 切り替え</text><text class="s" x="635" y="277">短時間だけ停止</text>
+        <path class="arrow both" d="M180,320 L570,320"/>
+        <!-- ラベルは最前面に描画 -->
+        <text class="al acc" x="224" y="66">データ</text>
+        <text class="al acc" x="494" y="66">データ</text>
+        <text class="al start" x="112" y="140">スキーマ</text>
+        <text class="al" x="375" y="345">この間、ソースのアプリは止めずに稼働し続けられる</text>
+      </svg>
+      <figcaption>全ロードの後は CDC（変更データキャプチャ）で差分を流し続ける。差分がほぼなくなった時点でアプリを止め、接続先を切り替えるので、停止時間は最後の短い時間だけで済む。</figcaption>
+    </figure>
+  </section>
+
+  <section class="card">
+    <h2>仕組みと主な機能</h2>
+    <h3>DMS の構成要素</h3>
+    <ul>
+      <li><strong>レプリケーションインスタンス</strong>（または DMS Serverless）：移行処理を実行する。</li>
+      <li><strong>エンドポイント</strong>：ソースとターゲットの接続情報。ターゲットには RDS / Aurora のほか、S3、DynamoDB、Kinesis、Redshift なども指定できる。</li>
+      <li><strong>タスク</strong>：<strong>全ロードのみ</strong> / <strong>全ロード + CDC</strong> / <strong>CDC のみ</strong> から選ぶ。テーブルの選択や名前の変換もここで設定する。</li>
+    </ul>
+    <h3>CDC（変更データキャプチャ）</h3>
+    <ul>
+      <li>ソース DB のトランザクションログを読んで、変更をターゲットに反映し続ける。</li>
+      <li>ソースごとに準備が必要（例：Oracle はサプリメンタルロギング、MySQL は binlog を ROW 形式に）。</li>
+      <li><strong>データ検証</strong>機能で、ソースとターゲットの行を比較できる。</li>
+    </ul>
+    <h3>DMS がやらないこと</h3>
+    <ul>
+      <li>DMS が作るのはテーブルと主キー程度。<strong>セカンダリインデックス、外部キー、ストアドプロシージャ、トリガー、ユーザー</strong>などは移行しない。</li>
+      <li>異種エンジン間では、これらを <strong>AWS SCT</strong> または <strong>DMS Schema Conversion</strong> で変換する。自動変換できない部分は評価レポートで確認して手で直す。</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>移行パターンの整理</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>パターン</th><th>例</th><th>主な手段</th></tr></thead>
+        <tbody>
+          <tr><td>同種移行</td><td>MySQL → RDS for MySQL / Aurora MySQL</td><td>ネイティブツール（ダンプ、レプリケーション）、DMS</td></tr>
+          <tr class="hit"><td>異種移行</td><td>Oracle → Aurora PostgreSQL</td><td>SCT / DMS Schema Conversion + DMS</td></tr>
+          <tr><td>DWH 移行</td><td>Oracle / Teradata → Redshift</td><td>SCT（データ抽出エージェント）+ DMS</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>試験で狙われるポイント</h2>
+    <ul class="points">
+      <li>「<strong>停止時間を最小化</strong>」→ DMS の <strong>全ロード + CDC</strong>。</li>
+      <li>「<strong>エンジンを変える</strong>」「<strong>ライセンス費用を削減</strong>」→ スキーマ変換（SCT / DMS Schema Conversion）が必要。</li>
+      <li>データ量と回線帯域から転送時間を見積もる問題が出る（5 TB ÷ 1 Gbps ≒ 約 11 時間）。全ロードだけで停止時間内に終わらないなら CDC を使う。</li>
+    </ul>
+  </section>
+
+  <p class="back"><a href="index.html">← サービス解説の一覧へ</a></p>
+</main>
+</body>
+</html>

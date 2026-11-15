@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EC2 スポットインスタンス</title>
+<link rel="stylesheet" href="service.css">
+</head>
+<body>
+<svg class="defs" aria-hidden="true" focusable="false"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-acc" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ng" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ng" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ok" d="M0,0L10,5L0,10z"/></marker>
+</defs></svg>
+<main>
+  <nav class="crumbs"><a href="../index.html">クイズ</a> / <a href="index.html">サービス解説</a></nav>
+  <header>
+    <span class="tag">コンピューティング</span>
+    <h1>Amazon EC2 スポットインスタンス</h1>
+    <p class="lead">AWS の余っている EC2 キャパシティを、オンデマンド料金から最大 90% 程度の割引で使える購入オプション。ただし AWS がキャパシティを必要とすると、2 分前の通知のあとで中断される。</p>
+  </header>
+
+  <section class="card">
+    <h2>構成図</h2>
+    <figure class="diagram">
+      <svg viewBox="0 0 720 340" role="img" aria-label="Auto Scaling グループでオンデマンドのベース容量と、複数タイプ・複数 AZ に分散したスポットを組み合わせる構成">
+        <rect class="zone" x="20" y="20" width="680" height="260" rx="10"/>
+
+        <text class="t" x="140" y="70">オンデマンド（ベース容量）</text>
+        <rect class="box" x="70" y="92" width="140" height="40" rx="8"/><text class="t" x="140" y="112">m6i.large</text>
+        <rect class="box" x="70" y="142" width="140" height="40" rx="8"/><text class="t" x="140" y="162">m6i.large</text>
+        <text class="s" x="140" y="210">常に必要な最低限の台数</text>
+
+        <text class="t" x="465" y="70">スポット（複数タイプ × 複数 AZ に分散）</text>
+        <rect class="acc" x="260" y="92" width="130" height="40" rx="8"/><text class="t" x="325" y="112">c6i / AZ-a</text>
+        <rect class="acc" x="400" y="92" width="130" height="40" rx="8"/><text class="t" x="465" y="112">m6i / AZ-b</text>
+        <rect class="acc" x="540" y="92" width="130" height="40" rx="8"/><text class="t" x="605" y="112">c5 / AZ-c</text>
+        <rect class="ng" x="260" y="142" width="130" height="40" rx="8"/><text class="t" x="325" y="155">c6a / AZ-b</text><text class="s" x="325" y="172">中断（2 分前に通知）</text>
+        <rect class="acc" x="400" y="142" width="130" height="40" rx="8"/><text class="t" x="465" y="162">m5 / AZ-a</text>
+        <rect class="acc" x="540" y="142" width="130" height="40" rx="8"/><text class="t" x="605" y="162">m6a / AZ-c</text>
+        <rect class="ok" x="260" y="210" width="410" height="46" rx="8"/>
+        <text class="t" x="465" y="226">別のプールから自動で補充</text><text class="s" x="465" y="244">キャパシティリバランスで中断前に先回りして置き換えも可能</text>
+        <path class="arrow ok" d="M325,182 L325,208"/>
+
+        <!-- ラベルは最前面に描画 -->
+        <text class="zl" x="34" y="28">Auto Scaling グループ（混合インスタンスポリシー）</text>
+        <text class="al" x="360" y="305">配分戦略：price-capacity-optimized（価格と中断リスクのバランスがよいプールを選ぶ）</text>
+        <text class="al" x="360" y="325">プール（インスタンスタイプ × AZ）を多く指定するほど、確保しやすく中断の影響も小さい</text>
+      </svg>
+      <figcaption>ベース部分はオンデマンド（または Savings Plans）で確保し、変動部分をスポットで安く賄う。1 つのプールに依存しないよう、タイプと AZ を分散させる。</figcaption>
+    </figure>
+  </section>
+
+  <section class="card">
+    <h2>仕組みと主な機能</h2>
+    <h3>中断とその対策</h3>
+    <ul>
+      <li>中断の <strong>2 分前</strong>に通知される（インスタンスメタデータや EventBridge で検知できる）。</li>
+      <li>それより前に<strong>リバランス推奨シグナル</strong>が届くことがあり、<strong>キャパシティリバランス</strong>を有効にした Auto Scaling は代わりのインスタンスを先に起動する。</li>
+      <li>アプリ側は<strong>ステートレス</strong>にする、<strong>チェックポイント</strong>を保存する、SQS などで処理を再試行できるようにする。</li>
+    </ul>
+    <h3>使い方</h3>
+    <ul>
+      <li>現在は入札は不要で、価格は需給に応じて緩やかに変動する（上限価格は任意で、省略時はオンデマンド料金）。</li>
+      <li>EC2 Auto Scaling の<strong>混合インスタンスポリシー</strong>、EC2 フリート、<strong>AWS Batch</strong>、ECS / EKS、EMR などから使える。</li>
+      <li><strong>属性ベースのインスタンスタイプ選択</strong>（vCPU やメモリの範囲を指定）で、候補のタイプを自動的に広げられる。</li>
+      <li>配分戦略は <code>price-capacity-optimized</code> が推奨。<code>lowest-price</code> は安いが中断されやすい。</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>EC2 の購入オプション</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>オプション</th><th>割引</th><th>向いているワークロード</th></tr></thead>
+        <tbody>
+          <tr><td>オンデマンド</td><td>なし</td><td>短期・予測できない・中断できない</td></tr>
+          <tr><td>Savings Plans（Compute / EC2 Instance）</td><td>最大 約 72%</td><td>1〜3 年の常時稼働。Compute はタイプ・リージョン・Fargate / Lambda にも柔軟</td></tr>
+          <tr><td>リザーブドインスタンス</td><td>最大 約 72%</td><td>構成が固定の常時稼働。Standard / Convertible</td></tr>
+          <tr class="hit"><td>スポット</td><td>最大 約 90%</td><td>中断耐性あり・時間に余裕がある・タイプに柔軟</td></tr>
+          <tr><td>オンデマンドキャパシティ予約</td><td>なし（SP / RI と併用可）</td><td>特定 AZ のキャパシティを確実に確保したい</td></tr>
+          <tr><td>Dedicated Hosts</td><td>—</td><td>ソケット / コア単位のライセンス、物理サーバーの専有</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>試験で狙われるポイント</h2>
+    <ul class="points">
+      <li>「<strong>中断されても再実行できる</strong>」「<strong>締め切りに余裕</strong>」「<strong>インスタンスタイプに柔軟</strong>」→ スポット。</li>
+      <li>1 日数時間しか動かないワークロードに RI / Savings Plans を買うと、24 時間分を払うことになり割高。</li>
+      <li>常時稼働のベースは Savings Plans / RI、変動部分はスポット、という組み合わせが定番の答え。</li>
+      <li>DB やステートフルな単一サーバーなど、中断が許されないものにスポットを選ぶ選択肢は不正解。</li>
+    </ul>
+  </section>
+
+  <p class="back"><a href="index.html">← サービス解説の一覧へ</a></p>
+</main>
+</body>
+</html>

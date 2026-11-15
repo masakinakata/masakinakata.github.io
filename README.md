@@ -10,16 +10,21 @@ AWS Certified Solutions Architect – Professional（SAP-C02）対策用の、�
 - 回答後に、選択肢ごとの解説と「押さえておきたいポイント」を表示
 - 1 つ選択／複数選択（「2 つ選択」など）の両方に対応
 - 3 問解き終わると結果画面を表示し、**間違えた問題だけを解き直せる**（全問正解するまで繰り返し可能）
+- 解説の最後に、問題の肝となるサービスの**図つき解説ページ**へのリンクを表示（新しいタブで開くので、クイズの進行は残る）
 - ライト／ダークモード、スマートフォン表示に対応
 
 ## ファイル構成
 
 | ファイル | 内容 |
 |---|---|
-| `aws-sap-qa.html` | 画面とクイズのロジック（公開時は `index.html` として配置） |
+| `index.html` | 画面とクイズのロジック |
 | `questions.js` | 問題と解説のデータ（`QUESTIONS` 配列） |
+| `services/index.html` | サービス解説の一覧ページ |
+| `services/<キー>.html` | 各サービスの解説ページ（構成図は SVG で直接記述） |
+| `services/catalog.js` | サービス解説のカタログ（キー・名前・カテゴリ・概要） |
+| `services/service.css` | サービス解説ページ共通のスタイル（図の部品のクラスを含む） |
 
-ビルドは不要です。`aws-sap-qa.html`（このリポジトリでは `index.html`）をブラウザで直接開けば動きます（`questions.js` を同じフォルダに置いてください）。
+ビルドは不要です。`index.html` をブラウザで直接開けば動きます。
 
 ## 問題の追加・修正
 
@@ -37,9 +42,17 @@ AWS Certified Solutions Architect – Professional（SAP-C02）対策用の、�
   summary: `正解は <strong>B</strong>。...`,
   why: { A: "...", B: "...", C: "...", D: "..." }, // 選択肢ごとの解説
   extra: `<h3>...</h3><table>...</table>`,        // 任意：比較表やコード例
-  points: ["...", "..."]           // 押さえておきたいポイント
+  points: ["...", "..."],          // 押さえておきたいポイント
+  services: ["aurora-global-database"] // 関連するサービス解説（services/catalog.js のキー）
 }
 ```
+
+## サービス解説ページの追加
+
+1. `services/` の既存ページ（例: `sqs.html`）をコピーして `services/<キー>.html` を作る
+2. 本文と構成図（SVG）を書き換える。図の部品は `service.css` のクラス（`box` / `acc` / `ok` / `ng` / `zone` / `arrow` / `t` / `s` / `zl` / `al`）を使う
+3. `services/catalog.js` の `SERVICES` に `"<キー>": { name, category, summary }` を追加する
+4. 関連する問題の `services` 配列にキーを追加する
 
 注意点:
 
@@ -49,7 +62,7 @@ AWS Certified Solutions Architect – Professional（SAP-C02）対策用の、�
 
 ## 設定
 
-1 回のテストの問題数は `aws-sap-qa.html` 内の定数で変更できます。
+1 回のテストの問題数は `index.html` 内の定数で変更できます。
 
 ```js
 const QUIZ_SIZE = 3;
@@ -59,9 +72,6 @@ const QUIZ_SIZE = 3;
 
 GitHub Pages（`masakinakata/masakinakata.github.io` リポジトリの `master` ブランチ直下）で公開しています。
 
-1. リポジトリをクローンする
-2. `aws-sap-qa.html` を `index.html` として、`questions.js` はそのままコピーする
-3. コミットして `master` に push する
-4. 数十秒〜1 分ほどで https://masakinakata.github.io/ に反映される
-
-編集はローカルの作業フォルダ（Git 管理なし）で行い、完成したファイルをこのリポジトリにコピーして公開しています。
+1. ファイルを編集してコミットする
+2. `master` に push する
+3. 数十秒〜1 分ほどで https://masakinakata.github.io/ に反映される

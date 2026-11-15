@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aurora Global Database</title>
+<link rel="stylesheet" href="service.css">
+</head>
+<body>
+<svg class="defs" aria-hidden="true" focusable="false"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-acc" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ng" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ng" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ok" d="M0,0L10,5L0,10z"/></marker>
+</defs></svg>
+<main>
+  <nav class="crumbs"><a href="../index.html">クイズ</a> / <a href="index.html">サービス解説</a></nav>
+  <header>
+    <span class="tag">データベース</span>
+    <h1>Amazon Aurora Global Database</h1>
+    <p class="lead">1 つの Aurora データベースを複数のリージョンにまたがって構成し、ストレージ層で高速にデータを複製する仕組み。リージョン障害に備えた DR と、離れた地域からの低レイテンシーな読み取りに使う。</p>
+  </header>
+
+  <section class="card">
+    <h2>構成図</h2>
+    <figure class="diagram">
+      <svg viewBox="0 0 720 400" role="img" aria-label="プライマリリージョンからセカンダリリージョンへストレージ層で複製する構成">
+        <rect class="box" x="230" y="10" width="260" height="40" rx="8"/>
+        <text class="t" x="360" y="30">Route 53（フェイルオーバールーティング）</text>
+
+        <rect class="zone" x="20" y="80" width="320" height="270" rx="10"/>
+        <rect class="zone" x="380" y="80" width="320" height="270" rx="10"/>
+
+        <rect class="box" x="50" y="115" width="260" height="44" rx="8"/>
+        <text class="t" x="180" y="137">アプリ（ALB + EC2）</text>
+        <rect class="acc" x="50" y="185" width="120" height="50" rx="8"/>
+        <text class="t" x="110" y="203">ライター</text><text class="s" x="110" y="222">読み書き</text>
+        <rect class="box" x="190" y="185" width="120" height="50" rx="8"/>
+        <text class="t" x="250" y="203">リーダー</text><text class="s" x="250" y="222">読み取り</text>
+        <rect class="box" x="50" y="265" width="260" height="60" rx="8"/>
+        <text class="t" x="180" y="286">クラスターボリューム</text><text class="s" x="180" y="306">3 AZ に 6 つのコピー</text>
+
+        <rect class="box dashed" x="410" y="115" width="260" height="44" rx="8"/>
+        <text class="t" x="540" y="137">アプリ（縮小構成で待機）</text>
+        <rect class="box" x="410" y="185" width="260" height="50" rx="8"/>
+        <text class="t" x="540" y="203">セカンダリクラスター</text><text class="s" x="540" y="222">平常時は読み取り専用・昇格で書き込み可能</text>
+        <rect class="box" x="410" y="265" width="260" height="60" rx="8"/>
+        <text class="t" x="540" y="286">クラスターボリューム</text><text class="s" x="540" y="306">複製先</text>
+
+        <path class="arrow acc" d="M300,50 L190,113"/>
+        <path class="arrow dashed" d="M420,50 L530,113"/>
+        <path class="arrow" d="M110,159 L110,183"/>
+        <path class="arrow" d="M250,159 L250,183"/>
+        <path class="line" d="M110,235 L110,265"/>
+        <path class="line" d="M250,235 L250,265"/>
+        <path class="line" d="M540,235 L540,265"/>
+        <path class="arrow acc" d="M310,295 L408,295"/>
+        <!-- ラベルは最前面に描画 -->
+        <text class="zl" x="34" y="88">us-east-1（プライマリ）</text>
+        <text class="zl end" x="686" y="88">us-west-2（セカンダリ）</text>
+        <text class="al end" x="432" y="68">障害時に切り替え</text>
+        <text class="al acc" x="359" y="285">複製</text>
+        <text class="al acc" x="360" y="380">ストレージ層で非同期にレプリケーション（遅延は通常 1 秒未満）</text>
+      </svg>
+      <figcaption>プライマリの書き込みはストレージ層で別リージョンへ複製される。DB インスタンスの負荷をほとんど増やさずに、低い遅延で複製できる。</figcaption>
+    </figure>
+  </section>
+
+  <section class="card">
+    <h2>仕組みと主な機能</h2>
+    <h3>プライマリとセカンダリ</h3>
+    <ul>
+      <li><strong>プライマリリージョン</strong>：読み書きができる唯一のクラスター。</li>
+      <li><strong>セカンダリリージョン</strong>：読み取り専用のクラスター。複数のリージョンに置ける。読み取りの負荷分散や、地域ごとの低レイテンシーな参照にも使える。</li>
+      <li>複製は <strong>ストレージ層</strong> で行われるため、binlog などを使う論理レプリケーションより高速で、プライマリ側の性能への影響も小さい。</li>
+    </ul>
+    <h3>切り替えの 2 種類</h3>
+    <ul>
+      <li><strong>スイッチオーバー（計画的）</strong>：リージョンが健全なときに、プライマリを別リージョンへ移す。データ損失なし（RPO 0）。メンテナンスや DR 訓練で使う。</li>
+      <li><strong>フェイルオーバー（計画外）</strong>：リージョン障害時にセカンダリを昇格させる。複製遅延の分だけデータを失う可能性がある（RPO ≒ 数秒程度）。RTO は通常 数分。</li>
+    </ul>
+    <h3>その他の機能</h3>
+    <ul>
+      <li><strong>書き込み転送</strong>：セカンダリに来た書き込みをプライマリへ転送できる。アプリの接続先を地域ごとに分けやすい。</li>
+      <li><strong>ヘッドレス構成</strong>：セカンダリに DB インスタンスを置かずストレージだけ複製しておき、障害時にインスタンスを追加する。コストを抑えられるが RTO は延びる。</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>似たしくみとの比較</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>方式</th><th>複製の仕組み</th><th>RPO の目安</th><th>書き込み</th></tr></thead>
+        <tbody>
+          <tr class="hit"><td>Aurora Global Database</td><td>ストレージ層</td><td>秒単位</td><td>プライマリのみ</td></tr>
+          <tr><td>クロスリージョンのリードレプリカ（RDS）</td><td>DB エンジンの論理 / 物理レプリケーション</td><td>秒〜分（負荷で増える）</td><td>プライマリのみ</td></tr>
+          <tr><td>スナップショットのリージョン間コピー</td><td>定期的なコピー</td><td>コピー間隔（時間単位）</td><td>—</td></tr>
+          <tr><td>DynamoDB グローバルテーブル</td><td>マルチリージョン・マルチアクティブ</td><td>秒単位（強い整合性のモードもあり）</td><td>全リージョンで可能</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>試験で狙われるポイント</h2>
+    <ul class="points">
+      <li>「<strong>リレーショナル DB</strong>」「<strong>別リージョンへの DR</strong>」「<strong>RPO が秒〜1 分</strong>」→ まず Aurora Global Database を疑う。</li>
+      <li>Multi-AZ やリードレプリカの追加は<strong>リージョン内の高可用性</strong>であり、リージョン障害の DR ではない。</li>
+      <li>「全リージョンで書き込みたい（アクティブ/アクティブ）」なら DynamoDB グローバルテーブルが候補。Aurora Global Database の書き込みはプライマリだけ。</li>
+      <li>DNS の切り替えは Route 53 のフェイルオーバールーティング + ヘルスチェック。より確実な切り替え管理には Route 53 Application Recovery Controller。</li>
+    </ul>
+  </section>
+
+  <p class="back"><a href="index.html">← サービス解説の一覧へ</a></p>
+</main>
+</body>
+</html>

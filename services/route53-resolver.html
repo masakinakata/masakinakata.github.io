@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Route 53 Resolver</title>
+<link rel="stylesheet" href="service.css">
+</head>
+<body>
+<svg class="defs" aria-hidden="true" focusable="false"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-acc" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ng" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ng" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ok" d="M0,0L10,5L0,10z"/></marker>
+</defs></svg>
+<main>
+  <nav class="crumbs"><a href="../index.html">クイズ</a> / <a href="index.html">サービス解説</a></nav>
+  <header>
+    <span class="tag">ネットワーク</span>
+    <h1>Amazon Route 53 Resolver</h1>
+    <p class="lead">VPC に標準で備わっている DNS リゾルバー。インバウンド / アウトバウンドの「Resolver エンドポイント」と「転送ルール」を使うと、オンプレミスと AWS の間で双方向に名前解決できる。</p>
+  </header>
+
+  <section class="card">
+    <h2>構成図</h2>
+    <figure class="diagram">
+      <svg viewBox="0 0 720 380" role="img" aria-label="インバウンドとアウトバウンドの Resolver エンドポイントによるハイブリッド DNS の構成">
+        <rect class="zone" x="20" y="30" width="200" height="320" rx="10"/>
+        <rect class="box" x="40" y="80" width="160" height="62" rx="8"/>
+        <text class="t" x="120" y="101">社内 DNS サーバー</text><text class="s" x="120" y="122">corp.example.com</text>
+        <rect class="box" x="40" y="230" width="160" height="50" rx="8"/>
+        <text class="t" x="120" y="255">社内サーバー</text>
+        <path class="arrow" d="M120,228 L120,145"/>
+
+        <rect class="zone" x="290" y="30" width="410" height="185" rx="10"/>
+        <rect class="acc" x="305" y="70" width="190" height="56" rx="8"/>
+        <text class="t" x="400" y="89">インバウンドエンドポイント</text><text class="s" x="400" y="109">オンプレ → AWS の問い合わせ</text>
+        <rect class="acc" x="305" y="145" width="190" height="56" rx="8"/>
+        <text class="t" x="400" y="164">アウトバウンドエンドポイント</text><text class="s" x="400" y="184">AWS → オンプレの問い合わせ</text>
+        <rect class="box" x="520" y="70" width="165" height="56" rx="8"/>
+        <text class="t" x="602" y="89">Route 53 Resolver</text><text class="s" x="602" y="109">VPC 標準のリゾルバー</text>
+        <rect class="box" x="520" y="145" width="165" height="56" rx="8"/>
+        <text class="t" x="602" y="164">プライベートホストゾーン</text><text class="s" x="602" y="184">aws.example.internal</text>
+        <path class="arrow" d="M495,98 L518,98"/>
+        <path class="line" d="M602,126 L602,145"/>
+
+        <path class="arrow acc" d="M200,100 L303,96"/>
+        <path class="arrow acc" d="M303,175 L202,130"/>
+
+        <rect class="zone" x="290" y="240" width="410" height="110" rx="10"/>
+        <rect class="box" x="310" y="280" width="120" height="50" rx="8"/>
+        <text class="t" x="370" y="298">VPC A</text><text class="s" x="370" y="316">ルールを関連付け</text>
+        <rect class="box" x="440" y="280" width="120" height="50" rx="8"/>
+        <text class="t" x="500" y="298">VPC B</text><text class="s" x="500" y="316">ルールを関連付け</text>
+        <rect class="box" x="570" y="280" width="120" height="50" rx="8"/>
+        <text class="t" x="630" y="298">VPC C</text><text class="s" x="630" y="316">ルールを関連付け</text>
+        <path class="arrow dashed" d="M370,280 L380,203"/>
+        <path class="arrow dashed" d="M500,280 L425,203"/>
+        <path class="arrow dashed" d="M630,280 L470,203"/>
+
+        <!-- ラベルは最前面に描画 -->
+        <text class="zl" x="34" y="38">オンプレミス</text>
+        <text class="zl" x="304" y="38">共有サービス VPC（ネットワークアカウント）</text>
+        <text class="al acc" x="252" y="88">転送</text>
+        <text class="al acc" x="252" y="172">転送ルール</text>
+        <text class="zl" x="304" y="334">他アカウントの VPC（ルールを RAM で共有）</text>
+        <text class="al" x="120" y="372">Direct Connect / VPN で AWS と接続</text>
+      </svg>
+      <figcaption>オンプレミス DNS は aws.example.internal の問い合わせをインバウンドエンドポイントへ転送する。VPC 側は「corp.example.com はオンプレ DNS へ」という転送ルールに従い、アウトバウンドエンドポイント経由で問い合わせる。</figcaption>
+    </figure>
+  </section>
+
+  <section class="card">
+    <h2>仕組みと主な機能</h2>
+    <h3>VPC 標準のリゾルバー</h3>
+    <ul>
+      <li>VPC CIDR の <strong>ベース + 2</strong> のアドレス（例：10.0.0.2）や <code>169.254.169.253</code> で利用できる。</li>
+      <li>このアドレスは <strong>VPC の外（オンプレミス）からは直接問い合わせできない</strong>。そのためにインバウンドエンドポイントがある。</li>
+    </ul>
+    <h3>エンドポイントとルール</h3>
+    <ul>
+      <li><strong>インバウンドエンドポイント</strong>：VPC 内に ENI（複数 AZ 推奨）を作り、オンプレミスからの問い合わせを受け付ける。</li>
+      <li><strong>アウトバウンドエンドポイント</strong>：VPC からオンプレミスなど外部の DNS へ問い合わせを送り出す。</li>
+      <li><strong>転送ルール</strong>：「どのドメインを、どの DNS サーバーに転送するか」を定義する。<strong>AWS RAM で他アカウントに共有</strong>し、各 VPC に関連付けられる。</li>
+    </ul>
+    <h3>関連機能</h3>
+    <ul>
+      <li><strong>プライベートホストゾーン</strong>：VPC 内だけで使える DNS ゾーン。インバウンドエンドポイントがある VPC に関連付けておく必要がある。他アカウントの VPC とも関連付けできる。</li>
+      <li><strong>Route 53 Profiles</strong>：ホストゾーンの関連付けや Resolver ルールなどの DNS 設定をまとめて、多数の VPC やアカウントに一括適用できる。</li>
+      <li><strong>Resolver DNS Firewall</strong>：悪性ドメインへの問い合わせをブロック。<strong>クエリログ</strong>で問い合わせを記録。</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>試験で狙われるポイント</h2>
+    <ul class="points">
+      <li><strong>インバウンド</strong> = 外（オンプレミス）から入ってくる問い合わせ、<strong>アウトバウンド</strong> = VPC から外へ出ていく問い合わせ。向きを取り違えさせる選択肢が多い。</li>
+      <li>マルチアカウントでは、エンドポイントは共有サービス VPC に 1 組だけ置き、<strong>ルールを RAM で共有</strong>するのが運用負荷の低い構成。</li>
+      <li>EC2 上に BIND などの DNS サーバーを立てる案は、動くが<strong>運用負荷が高い</strong>ため不正解になりやすい。</li>
+      <li>DHCP オプションセットでオンプレミス DNS を指定すると、VPC 側の<strong>プライベートホストゾーンが解決できなくなる</strong>。</li>
+    </ul>
+  </section>
+
+  <p class="back"><a href="index.html">← サービス解説の一覧へ</a></p>
+</main>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS DataSync</title>
+<link rel="stylesheet" href="service.css">
+</head>
+<body>
+<svg class="defs" aria-hidden="true" focusable="false"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-acc" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ng" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ng" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ok" d="M0,0L10,5L0,10z"/></marker>
+</defs></svg>
+<main>
+  <nav class="crumbs"><a href="../index.html">クイズ</a> / <a href="index.html">サービス解説</a></nav>
+  <header>
+    <span class="tag">移行</span>
+    <h1>AWS DataSync</h1>
+    <p class="lead">オンプレミスや他クラウドのストレージと AWS のストレージの間で、大量のファイルやオブジェクトを高速に転送・同期するサービス。スケジュール実行、帯域制限、転送データの検証が標準で付いている。</p>
+  </header>
+
+  <section class="card">
+    <h2>構成図</h2>
+    <figure class="diagram">
+      <svg viewBox="0 0 720 345" role="img" aria-label="オンプレミスの NAS から DataSync エージェント経由で S3、EFS、FSx に転送する構成">
+        <rect class="zone" x="20" y="25" width="220" height="280" rx="10"/>
+        <rect class="box" x="40" y="70" width="180" height="60" rx="8"/>
+        <text class="t" x="130" y="90">NAS</text><text class="s" x="130" y="110">NFS / SMB 共有</text>
+        <rect class="acc" x="40" y="195" width="180" height="70" rx="8"/>
+        <text class="t" x="130" y="219">DataSync エージェント</text><text class="s" x="130" y="241">VM として配置</text>
+        <path class="arrow" d="M130,130 L130,193"/>
+
+        <rect class="zone" x="300" y="25" width="400" height="280" rx="10"/>
+        <rect class="acc" x="320" y="160" width="170" height="100" rx="10"/>
+        <text class="t" x="405" y="188">DataSync</text><text class="s" x="405" y="212">スケジュール実行</text><text class="s" x="405" y="230">データ検証・帯域制限</text>
+        <path class="arrow acc" d="M220,230 L318,215"/>
+
+        <rect class="box" x="530" y="65" width="150" height="50" rx="8"/><text class="t" x="605" y="90">Amazon S3</text>
+        <rect class="box" x="530" y="145" width="150" height="50" rx="8"/><text class="t" x="605" y="170">Amazon EFS</text>
+        <rect class="box" x="530" y="225" width="150" height="50" rx="8"/><text class="t" x="605" y="250">Amazon FSx</text>
+        <path class="arrow acc" d="M490,190 L528,95"/>
+        <path class="arrow acc" d="M490,205 L528,172"/>
+        <path class="arrow acc" d="M490,220 L528,248"/>
+        <!-- ラベルは最前面に描画 -->
+        <text class="zl" x="34" y="33">オンプレミス</text>
+        <text class="al start" x="138" y="166">読み取り</text>
+        <text class="zl" x="314" y="33">AWS</text>
+        <text class="al acc" x="268" y="208">TLS</text>
+        <text class="al" x="268" y="328">経路：Direct Connect / VPN または インターネット</text>
+      </svg>
+      <figcaption>エージェントがオンプレミスのストレージを読み取り、暗号化して DataSync に送る。2 回目以降は変更があったファイルだけが転送される。</figcaption>
+    </figure>
+  </section>
+
+  <section class="card">
+    <h2>仕組みと主な機能</h2>
+    <ul>
+      <li><strong>ロケーション</strong>：転送元と転送先。NFS、SMB、HDFS、S3 互換のオブジェクトストレージ、他クラウドのストレージと、S3 / EFS / FSx（各種）の間で転送できる。</li>
+      <li><strong>エージェント</strong>：オンプレミスでは VM（VMware / Hyper-V / KVM）として配置する。AWS のストレージ同士の転送ではエージェント不要。</li>
+      <li><strong>タスク</strong>：転送の設定。<strong>スケジュール実行</strong>、<strong>帯域制限</strong>、<strong>フィルター</strong>（含める / 除外するパス）、<strong>データ検証</strong>を指定する。</li>
+      <li><strong>差分転送</strong>：変更されたファイルだけを転送するので、移行期間中に繰り返し同期して最後に切り替えられる。</li>
+      <li>メタデータ（タイムスタンプ、POSIX のアクセス権、NTFS ACL など）を保持できる。</li>
+      <li>VPC エンドポイントを使えば、Direct Connect などのプライベートな経路だけで転送できる。</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>データ転送サービスの使い分け</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>サービス</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr class="hit"><td>AWS DataSync</td><td>オンラインでの大量ファイルの移行・定期同期</td></tr>
+          <tr><td>AWS Storage Gateway</td><td>移行後もオンプレミスから AWS のストレージを使い続ける（ハイブリッド）</td></tr>
+          <tr><td>AWS Transfer Family</td><td>取引先などとの SFTP / FTPS / AS2 でのファイル交換</td></tr>
+          <tr><td>オフライン転送（物理デバイス）</td><td>回線が細い・期限が短いなど、ネットワーク経由では間に合わない場合</td></tr>
+          <tr><td>S3 Transfer Acceleration</td><td>遠く離れた場所から S3 へのアップロードを高速化</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>試験で狙われるポイント</h2>
+    <ul class="points">
+      <li>「<strong>オンラインで大量ファイルを移行</strong>」「<strong>スケジュール</strong>」「<strong>整合性の検証</strong>」「<strong>帯域制限</strong>」→ DataSync。</li>
+      <li>「移行後もオンプレミスから使い続ける」なら Storage Gateway。移行が目的なら DataSync。</li>
+      <li>転送時間の見積もり：200 TB ÷ 10 Gbps ≒ 約 2 日（理論値）。回線と期限から、オンラインかオフラインかを判断する。</li>
+    </ul>
+  </section>
+
+  <p class="back"><a href="index.html">← サービス解説の一覧へ</a></p>
+</main>
+</body>
+</html>

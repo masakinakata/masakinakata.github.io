@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S3 Intelligent-Tiering</title>
+<link rel="stylesheet" href="service.css">
+</head>
+<body>
+<svg class="defs" aria-hidden="true" focusable="false"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-acc" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ng" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ng" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ok" d="M0,0L10,5L0,10z"/></marker>
+</defs></svg>
+<main>
+  <nav class="crumbs"><a href="../index.html">クイズ</a> / <a href="index.html">サービス解説</a></nav>
+  <header>
+    <span class="tag">ストレージ</span>
+    <h1>S3 Intelligent-Tiering</h1>
+    <p class="lead">オブジェクトごとのアクセス状況を監視し、使われていないデータを自動で安い階層へ移すストレージクラス。アクセスされれば自動で元の階層に戻る。取り出し料金はかからない。</p>
+  </header>
+
+  <section class="card">
+    <h2>構成図</h2>
+    <figure class="diagram">
+      <svg viewBox="0 0 720 340" role="img" aria-label="Intelligent-Tiering の自動階層とオプション階層の移動の流れ">
+        <rect class="acc" x="20" y="50" width="200" height="80" rx="10"/>
+        <text class="t" x="120" y="78">高頻度アクセス階層</text><text class="s" x="120" y="102">S3 Standard と同等の料金</text>
+        <rect class="box" x="260" y="50" width="200" height="80" rx="10"/>
+        <text class="t" x="360" y="78">低頻度アクセス階層</text><text class="s" x="360" y="102">最大 約 40% 安い</text>
+        <rect class="box" x="500" y="50" width="200" height="80" rx="10"/>
+        <text class="t" x="600" y="78">アーカイブインスタント</text><text class="s" x="600" y="102">最大 約 68% 安い</text>
+        <path class="arrow" d="M220,90 L258,90"/>
+        <path class="arrow" d="M460,90 L498,90"/>
+        <path class="arrow acc" d="M600,130 Q 360,200 125,133"/>
+
+        <rect class="box dashed" x="260" y="225" width="200" height="70" rx="10"/>
+        <text class="t" x="360" y="250">アーカイブアクセス</text><text class="s" x="360" y="272">90 日〜・取り出しは分〜時間</text>
+        <rect class="box dashed" x="500" y="225" width="200" height="70" rx="10"/>
+        <text class="t" x="600" y="250">ディープアーカイブアクセス</text><text class="s" x="600" y="272">180 日〜・取り出しは時間単位</text>
+        <path class="arrow dashed" d="M460,260 L498,260"/>
+
+        <!-- ラベルは最前面に描画 -->
+        <text class="al" x="240" y="40">30 日アクセスなし</text>
+        <text class="al" x="480" y="40">90 日アクセスなし</text>
+        <text class="al acc" x="360" y="182">アクセスされると自動で高頻度階層へ戻る</text>
+        <text class="zl" x="20" y="225">オプション（有効化が必要）</text>
+        <text class="al ok" x="360" y="325">自動の 3 階層はどれもミリ秒でアクセスでき、取り出し料金なし</text>
+      </svg>
+      <figcaption>上段の 3 階層は自動で行き来する。下段のアーカイブ階層はオプションで、有効にするとさらに安くなるが、取り出しは非同期になる。</figcaption>
+    </figure>
+  </section>
+
+  <section class="card">
+    <h2>仕組みと主な機能</h2>
+    <ul>
+      <li>料金は、ストレージ料金に加えて、オブジェクト数に応じた少額の<strong>モニタリング・自動化料金</strong>がかかる。</li>
+      <li><strong>128 KB 未満のオブジェクト</strong>は監視の対象外で、常に高頻度アクセス階層の料金になる（モニタリング料金もかからない）。</li>
+      <li><strong>最小保存期間なし</strong>、<strong>取り出し料金なし</strong>。アクセスパターンが変わっても費用が跳ね上がらない。</li>
+      <li>オプションのアーカイブ階層は、バケットやプレフィックス、タグ単位で有効化する。</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>S3 ストレージクラスの比較</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>クラス</th><th>取り出し時間</th><th>最小保存期間</th><th>取り出し料金</th><th>向いているデータ</th></tr></thead>
+        <tbody>
+          <tr><td>S3 Standard</td><td>ミリ秒</td><td>なし</td><td>なし</td><td>頻繁にアクセスする</td></tr>
+          <tr class="hit"><td>S3 Intelligent-Tiering</td><td>ミリ秒（自動階層）</td><td>なし</td><td>なし</td><td>アクセスパターンが不明・変化する</td></tr>
+          <tr><td>S3 Standard-IA</td><td>ミリ秒</td><td>30 日</td><td>あり</td><td>アクセスは少ないがすぐ必要</td></tr>
+          <tr><td>S3 One Zone-IA</td><td>ミリ秒</td><td>30 日</td><td>あり</td><td>再作成できるデータ（1 AZ のみ）</td></tr>
+          <tr><td>S3 Glacier Instant Retrieval</td><td>ミリ秒</td><td>90 日</td><td>あり（高め）</td><td>四半期に 1 回程度のアクセス</td></tr>
+          <tr><td>S3 Glacier Flexible Retrieval</td><td>分〜時間</td><td>90 日</td><td>あり</td><td>バックアップ・アーカイブ</td></tr>
+          <tr><td>S3 Glacier Deep Archive</td><td>12 時間以内（標準）</td><td>180 日</td><td>あり</td><td>長期保管（規制対応など）</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>試験で狙われるポイント</h2>
+    <ul class="points">
+      <li>「<strong>アクセスパターンが不明・予測できない</strong>」「<strong>運用作業なし</strong>」→ S3 Intelligent-Tiering。</li>
+      <li>「<strong>90 日後はほぼ参照されない</strong>」のようにパターンが明確なら、<strong>ライフサイクルルール</strong>で適切なクラスへ移す方が安い。</li>
+      <li>One Zone-IA は 1 つの AZ にしか保存されないので、重要なデータの保存先としては不正解になりやすい。</li>
+      <li>小さなオブジェクトが大量にある場合、Intelligent-Tiering の効果は薄い（128 KB 未満は対象外）。</li>
+    </ul>
+  </section>
+
+  <p class="back"><a href="index.html">← サービス解説の一覧へ</a></p>
+</main>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS Application Migration Service</title>
+<link rel="stylesheet" href="service.css">
+</head>
+<body>
+<svg class="defs" aria-hidden="true" focusable="false"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-acc" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ng" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ng" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ok" d="M0,0L10,5L0,10z"/></marker>
+</defs></svg>
+<main>
+  <nav class="crumbs"><a href="../index.html">クイズ</a> / <a href="index.html">サービス解説</a></nav>
+  <header>
+    <span class="tag">移行</span>
+    <h1>AWS Application Migration Service（MGN）</h1>
+    <p class="lead">物理サーバー、VMware、Hyper-V、他クラウドのサーバーを、そのまま AWS へ移す（リホスト）ためのサービス。ディスクを継続的に複製しておき、テスト起動で確認してから短い停止時間で切り替える。</p>
+  </header>
+
+  <section class="card">
+    <h2>構成図</h2>
+    <figure class="diagram">
+      <svg viewBox="0 0 720 370" role="img" aria-label="ソースサーバーからステージングエリアへ継続的に複製し、テストインスタンスと本番インスタンスを起動する構成">
+        <rect class="zone" x="20" y="25" width="190" height="300" rx="10"/>
+        <rect class="box" x="40" y="65" width="150" height="56" rx="8"/>
+        <text class="t" x="115" y="84">サーバー 1</text><text class="s" x="115" y="104">レプリケーションエージェント</text>
+        <rect class="box" x="40" y="145" width="150" height="56" rx="8"/>
+        <text class="t" x="115" y="164">サーバー 2</text><text class="s" x="115" y="184">レプリケーションエージェント</text>
+        <rect class="box" x="40" y="225" width="150" height="56" rx="8"/>
+        <text class="t" x="115" y="244">サーバー 3</text><text class="s" x="115" y="264">レプリケーションエージェント</text>
+
+        <rect class="zone" x="260" y="25" width="440" height="300" rx="10"/>
+        <rect class="zone" x="280" y="60" width="190" height="245" rx="10"/>
+        <rect class="acc" x="295" y="100" width="160" height="56" rx="8"/>
+        <text class="t" x="375" y="119">レプリケーション</text><text class="s" x="375" y="139">サーバー（軽量 EC2）</text>
+        <rect class="box" x="295" y="195" width="160" height="56" rx="8"/>
+        <text class="t" x="375" y="214">EBS ボリューム</text><text class="s" x="375" y="234">低コストで複製データを保持</text>
+        <path class="arrow" d="M375,156 L375,193"/>
+
+        <rect class="zone" x="490" y="60" width="190" height="245" rx="10"/>
+        <rect class="box" x="505" y="100" width="160" height="56" rx="8"/>
+        <text class="t" x="585" y="119">テストインスタンス</text><text class="s" x="585" y="139">切り替え前に動作確認</text>
+        <rect class="ok" x="505" y="205" width="160" height="56" rx="8"/>
+        <text class="t" x="585" y="224">本番インスタンス</text><text class="s" x="585" y="244">カットオーバー</text>
+        <path class="arrow" d="M455,215 L503,130"/>
+        <path class="arrow ok" d="M455,228 L503,232"/>
+
+        <path class="arrow acc" d="M190,93 L293,122"/>
+        <path class="arrow acc" d="M190,173 L293,130"/>
+        <path class="arrow acc" d="M190,253 L293,138"/>
+        <!-- ラベルは最前面に描画 -->
+        <text class="zl" x="34" y="33">オンプレミス / 他クラウド</text>
+        <text class="zl" x="274" y="33">AWS（移行先 VPC）</text>
+        <text class="zl" x="294" y="68">ステージングエリア</text>
+        <text class="zl" x="504" y="68">ターゲットサブネット</text>
+        <text class="al acc" x="360" y="350">ブロックレベルで継続的に複製（データ転送は TCP 1500）</text>
+      </svg>
+      <figcaption>ソースサーバーのディスクの変更は、ステージングエリアへ常に複製される。起動するときは複製済みのデータから EC2 を作るので、カットオーバーの停止時間は分単位で済む。</figcaption>
+    </figure>
+  </section>
+
+  <section class="card">
+    <h2>仕組みと主な機能</h2>
+    <h3>移行の流れ</h3>
+    <ol>
+      <li>ソースサーバーに <strong>AWS Replication Agent</strong> をインストールする（vCenter 環境ではエージェントレスの複製も可能）。</li>
+      <li>初回の全体同期のあと、変更が<strong>継続的に</strong>ステージングエリアへ複製される。</li>
+      <li><strong>テストインスタンス</strong>を起動して動作確認する。この間もソースは動いたまま。</li>
+      <li>本番切り替え（<strong>カットオーバー</strong>）：アプリを止め、最終同期の後に本番インスタンスを起動して DNS などを切り替える。</li>
+      <li>問題なければソースとの複製を切り離し、アーカイブする。</li>
+    </ol>
+    <h3>主な機能</h3>
+    <ul>
+      <li><strong>起動テンプレート</strong>でインスタンスタイプやサブネット、セキュリティグループを事前に設定できる。</li>
+      <li><strong>起動後のアクション</strong>（SSM ドキュメント）で、移行後のエージェント導入や設定変更を自動化できる。</li>
+      <li>複数サーバーを<strong>アプリケーション / ウェーブ</strong>単位でまとめて操作できる。</li>
+      <li>サービス自体はソースサーバーごとに一定期間無料。ステージングエリアの EC2 や EBS の料金はかかる。</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>移行戦略「7 つの R」</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>戦略</th><th>概要</th><th>代表的なサービス</th></tr></thead>
+        <tbody>
+          <tr class="hit"><td>Rehost（リホスト）</td><td>そのまま移す</td><td>AWS MGN</td></tr>
+          <tr><td>Replatform（リプラットフォーム）</td><td>一部をマネージドサービスに置き換え</td><td>RDS、Elastic Beanstalk</td></tr>
+          <tr><td>Repurchase（再購入）</td><td>SaaS に乗り換え</td><td>—</td></tr>
+          <tr><td>Refactor（リファクタリング）</td><td>クラウドネイティブに作り直す</td><td>Lambda、ECS、DynamoDB</td></tr>
+          <tr><td>Relocate（リロケート）</td><td>ハイパーバイザーごと移す</td><td>VMware Cloud on AWS など</td></tr>
+          <tr><td>Retain / Retire</td><td>保持 / 廃止</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>試験で狙われるポイント</h2>
+    <ul class="points">
+      <li>「<strong>リホスト</strong>」「<strong>大量のサーバー</strong>」「<strong>停止時間を最小化</strong>」「<strong>テスト起動</strong>」→ AWS MGN。</li>
+      <li>VM Import/Export は少数台の単発移行向けで、変換中はサーバーを止める必要がある。</li>
+      <li>「何を移すか」でサービスを切り分ける：<strong>サーバー → MGN</strong>、<strong>DB → DMS</strong>、<strong>ファイル → DataSync</strong>。</li>
+    </ul>
+  </section>
+
+  <p class="back"><a href="index.html">← サービス解説の一覧へ</a></p>
+</main>
+</body>
+</html>

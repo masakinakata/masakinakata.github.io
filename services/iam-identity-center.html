@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IAM Identity Center</title>
+<link rel="stylesheet" href="service.css">
+</head>
+<body>
+<svg class="defs" aria-hidden="true" focusable="false"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-acc" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ng" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ng" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ok" d="M0,0L10,5L0,10z"/></marker>
+</defs></svg>
+<main>
+  <nav class="crumbs"><a href="../index.html">クイズ</a> / <a href="index.html">サービス解説</a></nav>
+  <header>
+    <span class="tag">セキュリティ・ガバナンス</span>
+    <h1>AWS IAM Identity Center</h1>
+    <p class="lead">従業員が 1 回のサインインで、組織内の複数の AWS アカウントや業務アプリにアクセスできるようにするサービス（旧 AWS SSO）。既存の社内 ID 基盤と連携できる。</p>
+  </header>
+
+  <section class="card">
+    <h2>構成図</h2>
+    <figure class="diagram">
+      <svg viewBox="0 0 720 390" role="img" aria-label="外部 IdP と連携した IAM Identity Center から権限セットを各アカウントに割り当てる構成">
+        <rect class="box" x="20" y="150" width="150" height="70" rx="8"/>
+        <text class="t" x="95" y="175">Microsoft Entra ID</text><text class="s" x="95" y="197">外部 ID プロバイダー</text>
+
+        <rect class="zone" x="215" y="25" width="250" height="320" rx="10"/>
+        <rect class="box" x="240" y="65" width="200" height="56" rx="8"/>
+        <text class="t" x="340" y="84">ユーザー・グループ</text><text class="s" x="340" y="104">SCIM で自動同期</text>
+        <rect class="acc" x="240" y="150" width="200" height="66" rx="8"/>
+        <text class="t" x="340" y="172">権限セット</text><text class="s" x="340" y="194">例：AdminAccess / ReadOnly</text>
+        <rect class="box" x="240" y="245" width="200" height="56" rx="8"/>
+        <text class="t" x="340" y="264">AWS アクセスポータル</text><text class="s" x="340" y="284">SSO のサインイン画面</text>
+
+        <path class="arrow acc" d="M170,165 L238,98"/>
+        <path class="arrow acc" d="M170,205 L238,272"/>
+
+        <rect class="box" x="510" y="40" width="190" height="60" rx="8"/>
+        <text class="t" x="605" y="60">本番アカウント</text><text class="s" x="605" y="80">ReadOnly ロールが自動作成</text>
+        <rect class="box" x="510" y="155" width="190" height="60" rx="8"/>
+        <text class="t" x="605" y="175">開発アカウント</text><text class="s" x="605" y="195">AdminAccess ロールが自動作成</text>
+        <rect class="box" x="510" y="270" width="190" height="60" rx="8"/>
+        <text class="t" x="605" y="290">共有サービスアカウント</text><text class="s" x="605" y="310">ReadOnly ロールが自動作成</text>
+        <path class="arrow acc" d="M440,170 L508,72"/>
+        <path class="arrow acc" d="M440,184 L508,185"/>
+        <path class="arrow acc" d="M440,198 L508,298"/>
+
+        <!-- ラベルは最前面に描画 -->
+        <text class="zl" x="229" y="33">IAM Identity Center</text>
+        <text class="al acc" x="190" y="120">SCIM</text>
+        <text class="al acc" x="190" y="258">SAML</text>
+        <text class="al" x="360" y="375">割り当て ＝ ユーザー/グループ × 権限セット × アカウント</text>
+      </svg>
+      <figcaption>Entra ID のユーザーとグループは SCIM で自動同期され、サインインは SAML で Entra ID に任せる。権限セットをアカウントに割り当てると、そのアカウントに IAM ロールが自動で作られる。</figcaption>
+    </figure>
+  </section>
+
+  <section class="card">
+    <h2>仕組みと主な機能</h2>
+    <h3>ID ソース（いずれか 1 つ）</h3>
+    <ul>
+      <li><strong>Identity Center ディレクトリ</strong>：Identity Center の中でユーザーを直接作る。</li>
+      <li><strong>Active Directory</strong>：AWS Managed Microsoft AD、または AD Connector 経由でオンプレミスの AD を使う。</li>
+      <li><strong>外部 ID プロバイダー</strong>：Entra ID や Okta など。認証は <strong>SAML 2.0</strong>、ユーザーとグループの同期は <strong>SCIM</strong>。</li>
+    </ul>
+    <h3>権限セットと割り当て</h3>
+    <ul>
+      <li><strong>権限セット</strong>：AWS 管理ポリシー、カスタマー管理ポリシー、インラインポリシー、アクセス許可の境界をまとめたテンプレート。</li>
+      <li>割り当てると、対象アカウントに <code>AWSReservedSSO_&lt;権限セット名&gt;_…</code> という IAM ロールが自動作成される。</li>
+      <li>利用者は<strong>一時的な認証情報</strong>だけを使う。CLI からは <code>aws sso login</code> で取得できる。</li>
+      <li>ユーザーの属性（部署など）を使った <strong>ABAC</strong> も可能。</li>
+    </ul>
+    <h3>運用</h3>
+    <ul>
+      <li>Organizations と統合されており、管理アカウントではなく<strong>委任管理者</strong>アカウントから運用するのが推奨。</li>
+      <li>AWS アカウントだけでなく、SAML 対応の業務アプリへの SSO にも使える。</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>似たサービスとの違い</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>サービス</th><th>対象</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr class="hit"><td>IAM Identity Center</td><td>従業員</td><td>複数アカウントや業務アプリへの SSO</td></tr>
+          <tr><td>IAM の SAML フェデレーション</td><td>従業員</td><td>アカウントごとに IdP とロールを設定（数が多いと大変）</td></tr>
+          <tr><td>Amazon Cognito</td><td>アプリのエンドユーザー</td><td>Web / モバイルアプリのサインアップ・サインイン</td></tr>
+          <tr><td>IAM ユーザー</td><td>—</td><td>長期的な認証情報。人のアクセスには非推奨</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>試験で狙われるポイント</h2>
+    <ul class="points">
+      <li>「<strong>従業員</strong>」「<strong>複数アカウント</strong>」「<strong>既存の社内 ID で SSO</strong>」→ IAM Identity Center。</li>
+      <li>「入退社を自動反映」→ <strong>SCIM</strong>。「サインイン」→ <strong>SAML</strong>。役割の違いを問われる。</li>
+      <li>「アプリの利用者」の認証なら Cognito。従業員向けと取り違えさせる選択肢に注意。</li>
+    </ul>
+  </section>
+
+  <p class="back"><a href="index.html">← サービス解説の一覧へ</a></p>
+</main>
+</body>
+</html>

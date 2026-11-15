@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session Manager</title>
+<link rel="stylesheet" href="service.css">
+</head>
+<body>
+<svg class="defs" aria-hidden="true" focusable="false"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-acc" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ng" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ng" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ok" d="M0,0L10,5L0,10z"/></marker>
+</defs></svg>
+<main>
+  <nav class="crumbs"><a href="../index.html">クイズ</a> / <a href="index.html">サービス解説</a></nav>
+  <header>
+    <span class="tag">管理・運用</span>
+    <h1>AWS Systems Manager Session Manager</h1>
+    <p class="lead">インバウンドポートを開けず、踏み台サーバーや SSH 鍵も使わずに、EC2 やオンプレミスのサーバーにシェル / RDP で接続できる機能。アクセスは IAM で制御し、操作ログも残せる。</p>
+  </header>
+
+  <section class="card">
+    <h2>構成図</h2>
+    <figure class="diagram">
+      <svg viewBox="0 0 720 380" role="img" aria-label="運用者が Systems Manager 経由でプライベートサブネットの EC2 に接続する構成。EC2 からはアウトバウンド通信のみ">
+        <rect class="box" x="20" y="55" width="150" height="66" rx="8"/>
+        <text class="t" x="95" y="78">運用者</text><text class="s" x="95" y="100">IAM で認可</text>
+        <rect class="acc" x="250" y="45" width="200" height="86" rx="10"/>
+        <text class="t" x="350" y="74">Systems Manager</text><text class="s" x="350" y="98">Session Manager</text>
+        <rect class="box" x="520" y="50" width="180" height="76" rx="8"/>
+        <text class="t" x="610" y="76">S3 / CloudWatch Logs</text><text class="s" x="610" y="100">セッションログを保存</text>
+        <path class="arrow acc" d="M170,88 L248,88"/>
+        <path class="arrow" d="M450,88 L518,88"/>
+
+        <rect class="zone" x="230" y="170" width="470" height="190" rx="10"/>
+        <rect class="zone" x="250" y="205" width="260" height="140" rx="10"/>
+        <rect class="box" x="270" y="245" width="220" height="70" rx="8"/>
+        <text class="t" x="380" y="268">EC2</text><text class="s" x="380" y="290">SSM Agent ／ インバウンド 0</text>
+        <rect class="acc" x="540" y="245" width="145" height="70" rx="8"/>
+        <text class="t" x="612" y="268">VPC エンドポイント</text><text class="s" x="612" y="290">ssm / ssmmessages</text>
+        <path class="arrow acc" d="M490,280 L538,280"/>
+        <path class="arrow acc" d="M600,243 L420,133"/>
+
+        <path class="arrow ng" d="M95,121 L95,280 L268,280"/>
+        <!-- ラベルは最前面に描画 -->
+        <text class="al acc" x="209" y="80">StartSession</text>
+        <text class="zl" x="244" y="178">VPC（インターネットへの経路なし）</text>
+        <text class="zl" x="264" y="213">プライベートサブネット</text>
+        <text class="al acc" x="514" y="272">443</text>
+        <text class="al acc start" x="560" y="160">アウトバウンド HTTPS のみ</text>
+        <text class="al ng start" x="105" y="305">SSH / RDP で直接</text>
+        <text class="al ng start" x="105" y="321">つなぐ必要なし</text>
+      </svg>
+      <figcaption>SSM Agent が自分から Systems Manager に接続しに行く仕組みなので、インスタンス側で受け付けるポートは不要。インターネットがなくても VPC エンドポイント経由で通信できる。</figcaption>
+    </figure>
+  </section>
+
+  <section class="card">
+    <h2>仕組みと主な機能</h2>
+    <h3>前提条件</h3>
+    <ul>
+      <li>インスタンスに <strong>SSM Agent</strong> が入っていること（Amazon Linux や Windows の多くの AMI にはプリインストール済み）。</li>
+      <li>インスタンスプロファイルに <code>AmazonSSMManagedInstanceCore</code> などの権限があること（またはデフォルトのホスト管理設定を使う）。</li>
+      <li>Systems Manager のエンドポイントへ<strong>アウトバウンド HTTPS</strong> で到達できること。プライベートなら <code>ssm</code>、<code>ssmmessages</code> などのインターフェイス VPC エンドポイントを作る。</li>
+    </ul>
+    <h3>主な機能</h3>
+    <ul>
+      <li><strong>アクセス制御</strong>：IAM ポリシーで「誰が、どのインスタンス（タグで指定可）に接続できるか」を制御。</li>
+      <li><strong>ログ</strong>：セッションの入出力を S3 や CloudWatch Logs に保存。開始・終了は CloudTrail に記録。</li>
+      <li><strong>暗号化</strong>：セッションのデータを KMS キーで暗号化できる。</li>
+      <li><strong>ポートフォワーディング</strong>：ローカルのポートをインスタンス経由でプライベートな RDS などに転送できる（踏み台の代わり）。</li>
+      <li><strong>Windows</strong>：Fleet Manager からブラウザで RDP 接続できる。</li>
+      <li>ハイブリッドアクティベーションで<strong>オンプレミスのサーバー</strong>にも使える。</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>サーバー接続方法の比較</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>方法</th><th>インバウンドポート</th><th>鍵の管理</th><th>コマンドログ</th></tr></thead>
+        <tbody>
+          <tr><td>踏み台サーバー + SSH</td><td>必要</td><td>必要</td><td>自前で用意</td></tr>
+          <tr><td>EC2 Instance Connect（エンドポイント）</td><td>22 番の許可が必要</td><td>一時的な鍵を自動で配布</td><td>なし</td></tr>
+          <tr class="hit"><td>Session Manager</td><td>不要</td><td>不要</td><td>S3 / CloudWatch Logs</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>試験で狙われるポイント</h2>
+    <ul class="points">
+      <li>「<strong>インバウンドポートを開けない</strong>」「<strong>踏み台を廃止</strong>」「<strong>鍵管理をやめる</strong>」「<strong>操作ログを残す</strong>」→ Session Manager。</li>
+      <li>インターネット経路のないサブネットでは <strong>VPC エンドポイント</strong>が必要、という前提条件もよく問われる。</li>
+      <li>Systems Manager にはほかに Run Command（一括コマンド実行）、Patch Manager（パッチ適用）、Parameter Store、Automation などがある。</li>
+    </ul>
+  </section>
+
+  <p class="back"><a href="index.html">← サービス解説の一覧へ</a></p>
+</main>
+</body>
+</html>

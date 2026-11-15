@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS Transit Gateway</title>
+<link rel="stylesheet" href="service.css">
+</head>
+<body>
+<svg class="defs" aria-hidden="true" focusable="false"><defs>
+  <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-acc" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ng" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ng" d="M0,0L10,5L0,10z"/></marker>
+  <marker id="ah-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="m-ok" d="M0,0L10,5L0,10z"/></marker>
+</defs></svg>
+<main>
+  <nav class="crumbs"><a href="../index.html">クイズ</a> / <a href="index.html">サービス解説</a></nav>
+  <header>
+    <span class="tag">ネットワーク</span>
+    <h1>AWS Transit Gateway</h1>
+    <p class="lead">多数の VPC、VPN、Direct Connect を 1 か所に集約してつなぐ、リージョン単位のネットワークハブ。ハブ＆スポーク型で推移的なルーティングができる。</p>
+  </header>
+
+  <section class="card">
+    <h2>構成図</h2>
+    <figure class="diagram">
+      <svg viewBox="0 0 720 440" role="img" aria-label="Transit Gateway を中心に複数アカウントの VPC とオンプレミスを接続する構成">
+        <rect class="box" x="40" y="20" width="150" height="56" rx="8"/>
+        <text class="t" x="115" y="40">VPC A</text><text class="s" x="115" y="60">アカウント 1（本番）</text>
+        <rect class="box" x="285" y="20" width="150" height="56" rx="8"/>
+        <text class="t" x="360" y="40">VPC B</text><text class="s" x="360" y="60">アカウント 2（開発）</text>
+        <rect class="box" x="530" y="20" width="150" height="56" rx="8"/>
+        <text class="t" x="605" y="40">VPC C</text><text class="s" x="605" y="60">アカウント 3</text>
+
+        <rect class="zone" x="230" y="112" width="260" height="138" rx="10"/>
+        <rect class="acc" x="270" y="150" width="180" height="70" rx="10"/>
+        <text class="t" x="360" y="174">Transit Gateway</text><text class="s" x="360" y="197">ルートテーブルで経路を制御</text>
+
+        <path class="line" d="M115,76 L300,150"/>
+        <path class="line" d="M360,76 L360,150"/>
+        <path class="line" d="M605,76 L420,150"/>
+
+        <rect class="box" x="40" y="290" width="190" height="56" rx="8"/>
+        <text class="t" x="135" y="310">Direct Connect ゲートウェイ</text><text class="s" x="135" y="330">TGW に関連付け</text>
+        <rect class="box" x="285" y="290" width="150" height="56" rx="8"/>
+        <text class="t" x="360" y="310">VPC D</text><text class="s" x="360" y="330">共有サービス</text>
+        <rect class="box" x="490" y="290" width="190" height="56" rx="8"/>
+        <text class="t" x="585" y="310">Site-to-Site VPN</text><text class="s" x="585" y="330">TGW にアタッチ</text>
+
+        <path class="line" d="M300,220 L150,290"/>
+        <path class="line" d="M360,220 L360,290"/>
+        <path class="line" d="M420,220 L570,290"/>
+
+        <rect class="box" x="40" y="376" width="190" height="50" rx="8"/>
+        <text class="t" x="135" y="401">オンプレミス DC</text>
+        <rect class="box" x="490" y="376" width="190" height="50" rx="8"/>
+        <text class="t" x="585" y="401">支店・拠点</text>
+        <path class="line" d="M135,346 L135,376"/>
+        <path class="line" d="M585,346 L585,376"/>
+        <!-- ラベルは最前面に描画 -->
+        <text class="zl" x="498" y="168">ネットワークアカウント</text>
+        <text class="zl" x="498" y="186">（RAM で組織に共有）</text>
+        <text class="al start" x="144" y="366">トランジット VIF</text>
+        <text class="al start" x="594" y="366">IPsec VPN</text>
+      </svg>
+      <figcaption>すべての接続を Transit Gateway に集約する。各 VPC は TGW へのアタッチメントを 1 つ持つだけでよく、VPC が増えても接続数は線形にしか増えない。</figcaption>
+    </figure>
+  </section>
+
+  <section class="card">
+    <h2>仕組みと主な機能</h2>
+    <h3>アタッチメント</h3>
+    <ul>
+      <li>TGW には <strong>VPC</strong>、<strong>Site-to-Site VPN</strong>、<strong>Direct Connect ゲートウェイ</strong>、<strong>他リージョンの TGW（ピアリング）</strong>、<strong>Connect（SD-WAN 機器との GRE/BGP）</strong>をアタッチできる。</li>
+      <li>Direct Connect との接続は <strong>トランジット VIF</strong> → Direct Connect ゲートウェイ → TGW。</li>
+    </ul>
+    <h3>ルートテーブル（関連付けと伝播）</h3>
+    <ul>
+      <li><strong>関連付け（association）</strong>：アタッチメントから来た通信が、どのルートテーブルで経路を決めるか。</li>
+      <li><strong>伝播（propagation）</strong>：アタッチメントの CIDR を、どのルートテーブルに自動で載せるか。</li>
+      <li>ルートテーブルを分けることで「本番と開発は通信させないが、どちらも共有サービス VPC には届く」といった<strong>セグメント分割</strong>ができる。</li>
+    </ul>
+    <h3>マルチアカウントでの使い方</h3>
+    <ul>
+      <li>ネットワークアカウントで TGW を作り、<strong>AWS RAM</strong> で組織や OU に共有する。各アカウントは自分の VPC をアタッチするだけ。</li>
+      <li>通信を集中検査したいときは、<strong>インスペクション VPC</strong>（AWS Network Firewall など）を経由させる。このときアタッチメントの<strong>アプライアンスモード</strong>を有効にして、往復の通信が同じ AZ を通るようにする。</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>VPC 間接続の比較</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>方式</th><th>推移的ルーティング</th><th>向いている規模・用途</th></tr></thead>
+        <tbody>
+          <tr><td>VPC ピアリング</td><td>不可</td><td>少数の VPC 同士。データ処理料金がかからず低コスト</td></tr>
+          <tr class="hit"><td>Transit Gateway</td><td>可能</td><td>数十〜数千の VPC とオンプレミスを集中管理</td></tr>
+          <tr><td>AWS Cloud WAN</td><td>可能</td><td>複数リージョンにまたがるグローバル WAN をポリシーで管理</td></tr>
+          <tr><td>AWS PrivateLink</td><td>—（サービス単位）</td><td>特定のサービスだけを一方向に公開。CIDR が重複していても可</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>試験で狙われるポイント</h2>
+    <ul class="points">
+      <li>「<strong>多数の VPC</strong>」「<strong>相互接続</strong>」「<strong>集中管理</strong>」「<strong>運用負荷最小</strong>」→ Transit Gateway + RAM 共有。</li>
+      <li>VPC ピアリングは<strong>推移的ルーティングができない</strong>（A–B、B–C をつないでも A–C は通信できない）。</li>
+      <li>TGW には時間単位のアタッチメント料金と、<strong>データ処理料金</strong>がかかる。大量データを少数 VPC 間で流すだけならピアリングの方が安い場合がある。</li>
+      <li>EC2 の VPN アプライアンスで組む「トランジット VPC」は古い構成。今はまず TGW を選ぶ。</li>
+    </ul>
+  </section>
+
+  <p class="back"><a href="index.html">← サービス解説の一覧へ</a></p>
+</main>
+</body>
+</html>
