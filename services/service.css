@@ -114,3 +114,24 @@ svg.defs .m-ok  { fill: var(--ok); }
 .svc-card strong { display: block; margin-bottom: 4px; }
 .svc-card span { font-size: 13px; color: var(--muted); }
 .cat { font-size: 15px; margin: 24px 0 10px; }
+
+/* ===== スマホ幅 ===== */
+.scroll-hint { display: none; }
+@media (max-width: 600px) {
+  body { font-size: 15px; line-height: 1.7; }
+  main { padding: 18px 10px 48px; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 16px; }
+  h3 { font-size: 14px; margin-top: 16px; }
+  .lead { font-size: 14px; }
+  .tag { font-size: 11px; padding: 1px 8px; }
+  .card { padding: 16px 14px; border-radius: 10px; margin-bottom: 14px; }
+  ul, ol { padding-left: 1.2em; }
+  table { font-size: 12.5px; min-width: 440px; }
+  th, td { padding: 6px 7px; }
+  /* 図は縮めすぎると文字が読めないので、読める大きさを保って横スクロールにする */
+  .diagram { margin: 0 -14px; padding: 0 14px; }
+  .scroll-hint { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+  .svc-grid { grid-template-columns: 1fr; gap: 8px; }
+  .svc-card { padding: 12px 14px; }
+}

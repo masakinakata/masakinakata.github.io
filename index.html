@@ -152,6 +152,32 @@
   .review-list .meta { font-size: 12px; color: var(--muted); display: block; }
   .review-list .ans { font-size: 13px; color: var(--muted); }
   [hidden] { display: none !important; }
+
+  /* スマホ幅：入れ子の余白を詰め、文字を少し小さくして本文の幅を確保する */
+  @media (max-width: 600px) {
+    body { font-size: 15px; line-height: 1.7; }
+    main { padding: 20px 10px 48px; }
+    h1 { font-size: 19px; }
+    h2 { font-size: 16px; }
+    h3 { font-size: 14px; margin-top: 16px; }
+    .tag { font-size: 11px; padding: 1px 8px; }
+    .card { padding: 16px 14px; border-radius: 10px; margin-bottom: 14px; }
+    .options { gap: 8px; }
+    .option label { gap: 8px; padding: 10px 12px; border-radius: 8px; }
+    .option input { margin-top: 5px; }
+    .why { padding: 10px 11px; }
+    .result { font-size: 16px; padding: 12px 14px; }
+    button { padding: 10px 18px; }
+    table { font-size: 12.5px; min-width: 420px; }
+    th, td { padding: 6px 7px; }
+    pre { font-size: 12px; padding: 10px; }
+    ul.points, .reqs { padding-left: 1.2em; }
+    .svc-link { flex-wrap: wrap; gap: 2px 10px; padding: 10px 12px; }
+    .svc-link .svc-name { flex-basis: 100%; order: 3; }
+    .svc-link .svc-arrow { margin-left: auto; }
+    .score .num { font-size: 36px; }
+    .review-list li { padding: 8px 10px; gap: 8px; }
+  }
 </style>
 </head>
 <body>
